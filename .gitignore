@@ -127,3 +127,17 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Pycharm dir
+/.idea/
+
+# Project data files
+/data/
+
+# Scratchbooks
+data_scratchbook.py
+model_scratchbook.py
+trashbin.py
+
+# Results
+/results/
