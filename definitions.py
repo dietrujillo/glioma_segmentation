@@ -18,10 +18,9 @@ MAX_CROP_LIMIT = [(40, 196), (29, 222), (0, 148)]
 CROP_LIMIT = [(20, 220), (20, 220), (6, 150)]
 SEGMENTATION_CATEGORIES = [0., 1., 2., 4.]
 SEGMENTATION_MERGE_DICT = {
-    0: tuple(), # Background does not merge
-    1: tuple(), # Neither does enhancing tumor core
-    2: (1, 3), # All of the tumor regions form the whole tumor
-    3: (1,) # The two innermost tumor regions form the tumor core
+    0: tuple(),  # Enhancing tumor core does not merge
+    1: (0, 2),  # All of the tumor regions form the whole tumor
+    2: (0,)  # The two innermost tumor regions form the tumor core
 }
 
 # TRAINING

@@ -1,6 +1,6 @@
 import glob
 import os
-from typing import AnyStr, List, Tuple, Dict
+from typing import AnyStr, List, Tuple, Dict, Any
 
 import dask
 import nibabel as nib
@@ -47,7 +47,9 @@ def preprocess_scan(filepath: AnyStr, output_file: AnyStr) -> None:
     nib.save(nib.Nifti1Image(data, None), output_file)
 
 
-def one_hot_encode_segmentation(arr: np.ndarray, categories=None, handle_unknown="error") -> np.ndarray:
+def one_hot_encode_segmentation(arr: np.ndarray, categories: List[Any] = SEGMENTATION_CATEGORIES,
+                                handle_unknown: AnyStr = "error",
+                                use_background: bool = False, background_value: float = 0) -> np.ndarray:
     """
     One-Hot (dummy) encode the segmentation volume.
     A volume of shape (x, y, z) with discrete values representing segmentation classes
@@ -56,17 +58,23 @@ def one_hot_encode_segmentation(arr: np.ndarray, categories=None, handle_unknown
     :param arr: array to be encoded.
     :param categories: expected categories. If None, extract categories from the data.
     :param handle_unknown: {"error", "ignore"}. How to respond to unexpected values if categories is specified.
+    :param use_background: whether to use the background of the image as another category.
+    :param background_value: value for the background voxels.
     :return: encoded array.
     """
     if categories is None:
-        categories = np.unique(arr)
+        categories = list(np.unique(arr))
     elif handle_unknown == "error":
-        if set(np.unique(arr)) != set(categories):
+        if any(x not in categories for x in np.unique(arr)):
             raise ValueError(f"Encountered unexpected value in array: values found are {np.unique(arr)}")
+
+    if not use_background:
+        categories = list(categories)
+        categories.remove(background_value)
 
     out = np.zeros((*arr.shape, len(categories)), dtype=int)
     for index, cat in enumerate(categories):
-        out[arr == cat][:, :, :, index] = 1
+        out[:, :, :, index][arr == cat] = 1
     return out
 
 
@@ -145,3 +153,18 @@ def preprocessing_pipeline(data_path: AnyStr = DATA_PATH,
 if __name__ == '__main__':
     preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS2020_TrainingData/HGG"),
                            os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS2020_TrainingData/HGG"))
+
+    preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS2020_TrainingData/LGG"),
+                           os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS2020_TrainingData/LGG"))
+
+    preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS_2019_Data_Training/HGG"),
+                           os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS_2019_Data_Training/HGG"))
+
+    preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS_2019_Data_Training/LGG"),
+                           os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS_2019_Data_Training/LGG"))
+
+    preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS_2018_Data_Training/HGG"),
+                           os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS_2018_Data_Training/HGG"))
+
+    preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS_2018_Data_Training/LGG"),
+                           os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS_2018_Data_Training/LGG"))

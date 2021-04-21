@@ -78,7 +78,7 @@ class UNet(tf.keras.models.Model):
         self.d1_l1 = ConvBlock(64, (3, 3, 3), name="d3_l1")
         self.d1_l2 = ConvBlock(32, (3, 3, 3), name="d3_l2")
 
-        self.out = ConvBlock(4, (1, 1, 1), name="out")
+        self.out = ConvBlock(3, (1, 1, 1), name="out")
 
         self.build(input_shape=input_shape)
 
