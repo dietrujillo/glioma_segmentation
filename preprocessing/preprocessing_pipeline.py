@@ -1,23 +1,36 @@
 import glob
 import os
-from typing import AnyStr
+from typing import AnyStr, List, Tuple, Dict
 
 import dask
 import nibabel as nib
 import numpy as np
 from dask.diagnostics import ProgressBar
 
-from definitions import DATA_PATH, PREPROCESSED_DATA_PATH, SCAN_TYPES
+from definitions import (
+    DATA_PATH, PREPROCESSED_DATA_PATH, SCAN_TYPES,
+    CROP_LIMIT, SEGMENTATION_CATEGORIES, SEGMENTATION_MERGE_DICT
+)
+
+
+def crop(arr: np.array, lim: List[Tuple[int, int]] = CROP_LIMIT):
+    """
+    Crop a 3D array using the limits provided in CROP_LIMIT
+    :param arr: array to be cropped
+    :param lim: list containing tuples of lower and upper limit per axis.
+    :return: cropped array.
+    """
+    return arr[lim[0][0]:lim[0][1], lim[1][0]:lim[1][1], lim[2][0]:lim[2][1]]
 
 
 def scale(arr: np.ndarray) -> np.ndarray:
     """
-    Simple scaling.
+    Simple [0, 1] scaling.
     :param arr: array to be scaled.
     :return: scaled array.
     """
-    min_value = min(arr)
-    max_value = max(arr)
+    min_value = np.min(arr)
+    max_value = np.max(arr)
     return (arr - min_value) / (max_value - min_value)
 
 
@@ -29,6 +42,7 @@ def preprocess_scan(filepath: AnyStr, output_file: AnyStr) -> None:
     :return: None
     """
     data = nib.load(filepath).get_fdata()
+    data = crop(data)
     data = scale(data)
     nib.save(nib.Nifti1Image(data, None), output_file)
 
@@ -50,15 +64,26 @@ def one_hot_encode_segmentation(arr: np.ndarray, categories=None, handle_unknown
         if set(np.unique(arr)) != set(categories):
             raise ValueError(f"Encountered unexpected value in array: values found are {np.unique(arr)}")
 
-    # FIXME
-    def all_idx(idx, axis):
-        grid = np.ogrid[tuple(map(slice, idx.shape))]
-        grid.insert(axis, idx)
-        return tuple(grid)
-
     out = np.zeros((*arr.shape, len(categories)), dtype=int)
-    out[all_idx(arr, axis=2)] = 1
+    for index, cat in enumerate(categories):
+        out[arr == cat][:, :, :, index] = 1
     return out
+
+
+def merge_segmentation_classes(arr: np.ndarray,
+                               merge_dict: Dict[int, Tuple[int]] = SEGMENTATION_MERGE_DICT) -> np.ndarray:
+    """
+    Merges some segmentation classes together.
+    For example, classes 1, 2 and 4 combine to form the whole tumor.
+    :param arr: array to be modified.
+    :param merge_dict: segmentation classes to merge.
+    :return: modified array.
+    """
+    for index, values in merge_dict.items():
+        for value in values:
+            arr[:, :, :, index] |= arr[:, :, :, value]
+
+    return arr
 
 
 def preprocess_segmentation(filepath: AnyStr, output_file: AnyStr) -> None:
@@ -69,7 +94,9 @@ def preprocess_segmentation(filepath: AnyStr, output_file: AnyStr) -> None:
     :return: None
     """
     seg = nib.load(filepath).get_fdata()
-    # TODO: preprocess segmentation ground truth
+    seg = crop(seg)
+    seg = one_hot_encode_segmentation(seg, categories=SEGMENTATION_CATEGORIES)
+    seg = merge_segmentation_classes(seg)
     nib.save(nib.Nifti1Image(seg, None), output_file)
 
 
@@ -85,11 +112,11 @@ def preprocess_patient(patient_dir: AnyStr, output_dir: AnyStr) -> None:
     os.makedirs(output_dir, exist_ok=True)
     try:
         for scan_type in SCAN_TYPES:
-            matches = glob.glob(os.path.join(patient_dir, f"*{scan_type}.nii"))
+            matches = glob.glob(os.path.join(patient_dir, f"*{scan_type}.nii.gz"))
             assert len(matches) == 1
             preprocess_scan(matches[0], os.path.join(output_dir, os.path.basename(matches[0])))
 
-        matches = glob.glob(os.path.join(patient_dir, f"*seg.nii"))
+        matches = glob.glob(os.path.join(patient_dir, f"*seg.nii.gz"))
         assert len(matches) == 1
         preprocess_segmentation(matches[0], os.path.join(output_dir, os.path.basename(matches[0])))
     except AssertionError:
@@ -116,4 +143,5 @@ def preprocessing_pipeline(data_path: AnyStr = DATA_PATH,
 
 
 if __name__ == '__main__':
-    preprocessing_pipeline(DATA_PATH, PREPROCESSED_DATA_PATH)
+    preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS2020_TrainingData/HGG"),
+                           os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS2020_TrainingData/HGG"))

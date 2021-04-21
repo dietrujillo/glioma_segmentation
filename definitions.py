@@ -8,12 +8,21 @@ PREPROCESSED_DATA_SHAPE = (240, 240, 155)
 
 # FILE PATHS
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(PROJECT_ROOT, "data/MICCAI_BraTS2020_TrainingData")
-PREPROCESSED_DATA_PATH = os.path.join(PROJECT_ROOT, "data/preprocessed")
+DATA_PATH = os.path.join(PROJECT_ROOT, "data")
+PREPROCESSED_DATA_PATH = os.path.join(PROJECT_ROOT, "preprocessed")
 RESULTS_PATH = os.path.join(PROJECT_ROOT, "results")
 
-# AUGMENTATION
+# PREPROCESSING & AUGMENTATION
 NO_AUGMENTATION_PROBABILITY = 0.5
+MAX_CROP_LIMIT = [(40, 196), (29, 222), (0, 148)]
+CROP_LIMIT = [(20, 220), (20, 220), (6, 150)]
+SEGMENTATION_CATEGORIES = [0., 1., 2., 4.]
+SEGMENTATION_MERGE_DICT = {
+    0: tuple(), # Background does not merge
+    1: tuple(), # Neither does enhancing tumor core
+    2: (1, 3), # All of the tumor regions form the whole tumor
+    3: (1,) # The two innermost tumor regions form the tumor core
+}
 
 # TRAINING
 DEFAULT_OPTIMIZER = "adam"

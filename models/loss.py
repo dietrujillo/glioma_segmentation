@@ -20,7 +20,9 @@ def dice_loss(y_true: np.ndarray, y_pred: np.ndarray, epsilon: float = 1e-10) ->
     epsilon = tf.constant(epsilon)
     numerator = tf.add(intersection, tf.constant(epsilon))
     denominator = tf.reduce_sum(y_true) + tf.reduce_sum(y_pred) + epsilon
-    return tf.constant(1) - tf.constant(2) * tf.divide(numerator, denominator)
+    general_loss = tf.constant(1) - tf.constant(2) * tf.divide(numerator, denominator)
+    per_pixel_loss = general_loss * tf.square(tf.subtract(y_true, y_pred))
+    return per_pixel_loss
 
 
 def generalized_dice_loss(y_true: np.ndarray, y_pred: np.ndarray,

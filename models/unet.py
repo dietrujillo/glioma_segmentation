@@ -29,6 +29,10 @@ class ConvBlock(tf.keras.layers.Layer):
             activation_outputs = self.activation(conv_output)
         return activation_outputs
 
+    def build(self, input_shape):
+        super(ConvBlock, self).build(input_shape)
+        print(self.name, input_shape)
+
 
 class UNet(tf.keras.models.Model):
     """
