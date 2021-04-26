@@ -34,7 +34,6 @@ def data_loader(data_path: AnyStr,
         np.random.shuffle(patients)
 
     batch = []
-    current_batch = 0
 
     for patient in patients:
         patient_dir = os.path.join(data_path, patient)
@@ -54,8 +53,8 @@ def data_loader(data_path: AnyStr,
             if len(batch) >= batch_size:
                 if shuffle_batch:
                     np.random.shuffle(batch)
+                batch = np.stack(x[0] for x in batch), np.stack(x[1] for x in batch)
                 yield batch
-                current_batch += 1
                 batch = []
 
         except FileNotFoundError as e:
@@ -65,4 +64,5 @@ def data_loader(data_path: AnyStr,
     if batch:
         if shuffle_batch:
             np.random.shuffle(batch)
+        batch = np.stack(x[0] for x in batch), np.stack(x[1] for x in batch)
         yield batch

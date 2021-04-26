@@ -4,7 +4,7 @@ import os
 RANDOM_SEED = 42
 SCAN_TYPES = ("t1", "t2", "flair", "t1ce")
 INPUT_DATA_SHAPE = (240, 240, 155)
-PREPROCESSED_DATA_SHAPE = (240, 240, 155)
+PREPROCESSED_DATA_SHAPE = (200, 200, 144)
 
 # FILE PATHS
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))

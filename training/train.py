@@ -6,7 +6,7 @@ import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard, CSVLogger
 from tensorflow.keras.models import Model
 
-from models.dataloader import data_loader
+from training.dataloader import data_loader
 from definitions import (
     DATA_PATH, RESULTS_PATH,
     PREPROCESSED_DATA_SHAPE, SCAN_TYPES,
@@ -51,6 +51,8 @@ def train(training_id: AnyStr,
     model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
     model.build(input_shape=input_shape)
 
+    print(model.summary())
+
     results_dir = os.path.join(RESULTS_PATH, training_id)
     os.makedirs(results_dir, exist_ok=False)
 
@@ -60,9 +62,13 @@ def train(training_id: AnyStr,
 
     callbacks = [early_stopping, tensorboard, csv_logger]
 
-    history = model.fit(data_loader(data_path, augment=False), epochs=epochs,
-                        validation_data=data_loader(val_data_path, augment=False),
+    print(f"Start training of model {training_id}.")
+
+    history = model.fit(data_loader(data_path, augment=False, batch_size=batch_size), epochs=epochs,
+                        validation_data=data_loader(val_data_path, augment=False, batch_size=batch_size),
                         batch_size=batch_size, callbacks=callbacks)
+
+    print(f"Training of model {training_id} finished.")
 
     model.save(os.path.join(results_dir, "model.tf"), save_format="tf")
 

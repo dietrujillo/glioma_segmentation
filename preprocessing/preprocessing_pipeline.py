@@ -44,6 +44,7 @@ def preprocess_scan(filepath: AnyStr, output_file: AnyStr) -> None:
     data = nib.load(filepath).get_fdata()
     data = crop(data)
     data = scale(data)
+    data = data.astype("float32")
     nib.save(nib.Nifti1Image(data, None), output_file)
 
 
@@ -105,6 +106,7 @@ def preprocess_segmentation(filepath: AnyStr, output_file: AnyStr) -> None:
     seg = crop(seg)
     seg = one_hot_encode_segmentation(seg, categories=SEGMENTATION_CATEGORIES)
     seg = merge_segmentation_classes(seg)
+    seg = seg.astype(bool)
     nib.save(nib.Nifti1Image(seg, None), output_file)
 
 
