@@ -85,7 +85,6 @@ def _rotation(arr: np.ndarray, min_degree=-1, max_degree=1) -> np.ndarray:
     axes = list(range(arr.ndim))
     rotating_axis = np.random.choice(axes)
     rotating_plane = axes[:rotating_axis] + axes[rotating_axis + 1:]
-    print(rotating_axis, rotating_plane)
     degree = np.random.uniform(min_degree, max_degree)
     return rotate(arr, degree, rotating_plane)
 

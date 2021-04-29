@@ -1,6 +1,6 @@
 import gc
 import os
-from typing import Union, AnyStr, Iterable, Dict, Any, Tuple
+from typing import Union, AnyStr, Iterable, Dict, Any, Tuple, Callable
 
 import numpy as np
 import tensorflow as tf
@@ -46,7 +46,7 @@ def train(training_id: AnyStr,
           val_data_path: str = DATA_PATH,
           input_shape: Tuple[int] = (None, *PREPROCESSED_DATA_SHAPE, len(SCAN_TYPES)),
           optimizer: Union[AnyStr, tf.keras.optimizers.Optimizer] = DEFAULT_OPTIMIZER,
-          loss: Union[AnyStr, tf.keras.losses.Loss] = DEFAULT_LOSS,
+          loss: Union[AnyStr, tf.keras.losses.Loss, Callable] = DEFAULT_LOSS,
           metrics: Iterable[tf.keras.metrics.Metric] = METRICS,
           epochs: int = DEFAULT_EPOCHS,
           batch_size: int = BATCH_SIZE,

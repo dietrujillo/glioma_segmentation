@@ -4,6 +4,7 @@ from typing import Optional, AnyStr, Iterable, Tuple
 import nibabel as nib
 import numpy as np
 import tensorflow as tf
+
 from definitions import BATCH_SIZE, SCAN_TYPES
 from preprocessing.augmentation import apply_augmentation
 
