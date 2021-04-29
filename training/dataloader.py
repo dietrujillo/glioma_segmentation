@@ -53,7 +53,7 @@ def data_loader(data_path: AnyStr,
             if len(batch) >= batch_size:
                 if shuffle_batch:
                     np.random.shuffle(batch)
-                batch = np.stack(x[0] for x in batch), np.stack(x[1] for x in batch)
+                batch = np.stack([x[0] for x in batch]), np.stack([x[1] for x in batch])
                 print(batch[0].shape, batch[1].shape)
                 yield batch
                 batch = []

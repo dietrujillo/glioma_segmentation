@@ -106,7 +106,7 @@ def preprocess_segmentation(filepath: AnyStr, output_file: AnyStr) -> None:
     seg = crop(seg)
     seg = one_hot_encode_segmentation(seg, categories=SEGMENTATION_CATEGORIES)
     seg = merge_segmentation_classes(seg)
-    seg = seg.astype(bool)
+    seg = seg.astype(int)
     nib.save(nib.Nifti1Image(seg, None), output_file)
 
 

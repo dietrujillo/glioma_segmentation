@@ -11,9 +11,9 @@ def dice_score(y_true, y_pred, epsilon=1e-10):
     """
     intersection = tf.reduce_sum(tf.multiply(y_true, y_pred))
     epsilon = tf.constant(epsilon)
-    numerator = tf.add(intersection, tf.constant(epsilon))
+    numerator = tf.add(intersection, epsilon)
     denominator = tf.reduce_sum(y_true) + tf.reduce_sum(y_pred) + epsilon
-    return tf.constant(2) * tf.divide(numerator, denominator)
+    return tf.constant(2.) * tf.divide(numerator, denominator)
 
 
 def dice_whole_tumor(y_true, y_pred):

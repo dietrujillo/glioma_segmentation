@@ -29,21 +29,6 @@ def init_random_seed(random_state: int = RANDOM_SEED):
 
 
 def setup_gpu():
-    gpus = tf.config.list_physical_devices('GPU')
-    print("Setting up GPUs...")
-    if gpus:
-        try:
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, True)
-            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
-        except RuntimeError as e:
-            print(e)
-            raise
-    print("GPUs are ready.")
-
-
-def limit_mem():
     cfg = tf.compat.v1.ConfigProto()
     cfg.gpu_options.allow_growth = True
     tf.compat.v1.keras.backend.set_session(tf.compat.v1.Session(config=cfg))
@@ -65,7 +50,8 @@ def train(training_id: AnyStr,
           metrics: Iterable[tf.keras.metrics.Metric] = METRICS,
           epochs: int = DEFAULT_EPOCHS,
           batch_size: int = BATCH_SIZE,
-          early_stopping_params: Dict[AnyStr, Any] = EARLY_STOPPING_PARAMS) \
+          early_stopping_params: Dict[AnyStr, Any] = EARLY_STOPPING_PARAMS,
+          random_state: int = RANDOM_SEED) \
         -> tf.keras.callbacks.History:
     """
     Trains a model.
@@ -80,12 +66,12 @@ def train(training_id: AnyStr,
     :param epochs: maximum number of epochs (early stopping enabled by default)
     :param batch_size: batch size.
     :param early_stopping_params: dict with params for tf.keras.callbacks.EarlyStopping.
+    :param random_state: seed for the random number generator.
     :return: History object with training results.
     """
-    limit_mem()
     setup_gpu()
-    if RANDOM_SEED is not None:
-        init_random_seed(RANDOM_SEED)
+    if random_state is not None:
+        init_random_seed(random_state)
 
     model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
     model.build(input_shape=input_shape)
