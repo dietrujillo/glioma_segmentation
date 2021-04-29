@@ -1,4 +1,5 @@
 import os
+from training.loss import dice_loss
 
 # GLOBAL PARAMETERS
 RANDOM_SEED = 42
@@ -24,15 +25,15 @@ SEGMENTATION_MERGE_DICT = {
 }
 
 # TRAINING
-DEFAULT_OPTIMIZER = "adam"
-DEFAULT_LOSS = "categorical_crossentropy"
+DEFAULT_OPTIMIZER = "nadam"
+DEFAULT_LOSS = dice_loss
 DEFAULT_EPOCHS = 30
 BATCH_SIZE = 32
 EARLY_STOPPING_PARAMS = {
-    "monitor": "val_loss",
+    "monitor": "val_dice_score",
     "min_delta": 0,
-    "patience": 1,
+    "patience": 3,
     "baseline": None,
     "restore_best_weights": True
 }
-LOSS_WEIGHTS = [0.1, 0.4, 0.3, 0.2]
+LOSS_WEIGHTS = [0.2, 0.35, 0.45]

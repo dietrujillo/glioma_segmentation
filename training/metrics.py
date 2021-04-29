@@ -1,4 +1,5 @@
 import tensorflow as tf
+from definitions import LOSS_WEIGHTS
 
 
 def dice_score(y_true, y_pred, epsilon=1e-10):
@@ -46,4 +47,11 @@ def dice_enhancing_tumor_core(y_true, y_pred):
     return dice_score(y_true[:, :, :, 0], y_pred[:, :, :, 0])
 
 
-METRICS = [dice_whole_tumor, dice_tumor_core, dice_enhancing_tumor_core]
+def weighted_dice_score(y_true, y_pred):
+    dice_wt = dice_whole_tumor(y_true, y_pred)
+    dice_tc = dice_tumor_core(y_true, y_pred)
+    dice_etc = dice_enhancing_tumor_core(y_true, y_pred)
+    return sum(LOSS_WEIGHTS[i] * score for i, score in enumerate([dice_wt, dice_tc, dice_etc]))
+
+
+METRICS = [weighted_dice_score, dice_whole_tumor, dice_tumor_core, dice_enhancing_tumor_core]
