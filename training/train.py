@@ -14,7 +14,7 @@ from definitions import (
     EARLY_STOPPING_PARAMS, BATCH_SIZE,
     RANDOM_SEED
 )
-from training.dataloader import data_loader
+from training.dataloader import BraTSDataLoader
 from training.metrics import METRICS
 
 
@@ -89,8 +89,8 @@ def train(training_id: AnyStr,
 
     print(f"Start training of model {training_id}.")
 
-    history = model.fit(data_loader(data_path, augment=False, batch_size=batch_size), epochs=epochs,
-                        validation_data=data_loader(val_data_path, augment=False, batch_size=batch_size),
+    history = model.fit(BraTSDataLoader(data_path, augment=False, batch_size=batch_size), epochs=epochs,
+                        validation_data=BraTSDataLoader(val_data_path, augment=False, batch_size=batch_size),
                         batch_size=batch_size, validation_batch_size=batch_size, callbacks=callbacks)
 
     print(f"Training of model {training_id} finished.")
