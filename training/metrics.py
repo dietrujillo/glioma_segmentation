@@ -45,3 +45,5 @@ def dice_enhancing_tumor_core(y_true, y_pred):
     """
     return dice_score(y_true[:, :, :, 0], y_pred[:, :, :, 0])
 
+
+METRICS = [dice_whole_tumor, dice_tumor_core, dice_enhancing_tumor_core]

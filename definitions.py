@@ -15,7 +15,7 @@ RESULTS_PATH = os.path.join(PROJECT_ROOT, "results")
 # PREPROCESSING & AUGMENTATION
 NO_AUGMENTATION_PROBABILITY = 0.5
 MAX_CROP_LIMIT = [(40, 196), (29, 222), (0, 148)]
-CROP_LIMIT = [(20, 220), (20, 220), (6, 150)]
+CROP_LIMIT = [(20, 220), (20, 220), (0, 156)]
 SEGMENTATION_CATEGORIES = [0., 1., 2., 4.]
 SEGMENTATION_MERGE_DICT = {
     0: tuple(),  # Enhancing tumor core does not merge
@@ -25,8 +25,7 @@ SEGMENTATION_MERGE_DICT = {
 
 # TRAINING
 DEFAULT_OPTIMIZER = "adam"
-DEFAULT_LOSS = "sparse_categorical_crossentropy"
-DEFAULT_METRICS = ()
+DEFAULT_LOSS = "categorical_crossentropy"
 DEFAULT_EPOCHS = 30
 BATCH_SIZE = 32
 EARLY_STOPPING_PARAMS = {
