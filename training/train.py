@@ -12,7 +12,7 @@ from definitions import (
     PREPROCESSED_DATA_SHAPE, SCAN_TYPES,
     DEFAULT_OPTIMIZER, DEFAULT_LOSS, DEFAULT_EPOCHS,
     EARLY_STOPPING_PARAMS, BATCH_SIZE,
-    RANDOM_SEED
+    DEFAULT_COMPUTING_DEVICE, RANDOM_SEED
 )
 from training.dataloader import BraTSDataLoader
 from training.metrics import METRICS
@@ -59,6 +59,7 @@ def train(training_id: AnyStr,
           epochs: int = DEFAULT_EPOCHS,
           batch_size: int = BATCH_SIZE,
           early_stopping_params: Dict[AnyStr, Any] = EARLY_STOPPING_PARAMS,
+          computing_device: AnyStr = DEFAULT_COMPUTING_DEVICE,
           random_state: int = RANDOM_SEED) \
         -> tf.keras.callbacks.History:
     """
@@ -97,9 +98,10 @@ def train(training_id: AnyStr,
 
     print(f"Start training of model {training_id}.")
 
-    history = model.fit(BraTSDataLoader(data_path, augment=False, batch_size=batch_size), epochs=epochs,
-                        validation_data=BraTSDataLoader(val_data_path, augment=False, batch_size=batch_size),
-                        batch_size=batch_size, validation_batch_size=batch_size, callbacks=callbacks)
+    with tf.device(computing_device):
+        history = model.fit(BraTSDataLoader(data_path, augment=False, batch_size=batch_size), epochs=epochs,
+                            validation_data=BraTSDataLoader(val_data_path, augment=False, batch_size=batch_size),
+                            batch_size=batch_size, validation_batch_size=batch_size, callbacks=callbacks)
 
     print(f"Training of model {training_id} finished.")
     cleanup()
