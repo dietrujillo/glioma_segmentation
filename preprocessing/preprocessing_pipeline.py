@@ -7,10 +7,27 @@ import nibabel as nib
 import numpy as np
 from dask.diagnostics import ProgressBar
 
+from scipy.ndimage import zoom
+
 from definitions import (
     DATA_PATH, PREPROCESSED_DATA_PATH, SCAN_TYPES,
-    CROP_LIMIT, SEGMENTATION_CATEGORIES, SEGMENTATION_MERGE_DICT
+    CROP_LIMIT, SEGMENTATION_CATEGORIES, SEGMENTATION_MERGE_DICT,
+    CROP_SHAPE, RESIZE_SHAPE
 )
+
+
+def resize(arr: np.ndarray,
+           input_shape: Tuple[int, int, int] = CROP_SHAPE,
+           output_shape: Tuple[int, int, int] = RESIZE_SHAPE) -> np.ndarray:
+    """
+    Resize a 3D array.
+    :param arr: array to be resized.
+    :param input_shape: expected shape of the received array.
+    :param output_shape: shape of the resized array.
+    :return: resized array.
+    """
+    factor = [b / a for a, b in zip(input_shape, output_shape)]
+    return zoom(arr, zoom=factor)
 
 
 def crop(arr: np.array, lim: List[Tuple[int, int]] = CROP_LIMIT) -> np.ndarray:
@@ -43,6 +60,7 @@ def preprocess_scan(filepath: AnyStr, output_file: AnyStr) -> None:
     """
     data = nib.load(filepath).get_fdata()
     data = crop(data)
+    data = resize(data)
     data = scale(data)
     data = data.astype("float32")
     nib.save(nib.Nifti1Image(data, None), output_file)
@@ -105,7 +123,10 @@ def preprocess_segmentation(filepath: AnyStr, output_file: AnyStr) -> None:
     seg = nib.load(filepath).get_fdata()
     seg = crop(seg)
     seg = one_hot_encode_segmentation(seg, categories=SEGMENTATION_CATEGORIES)
-    seg = merge_segmentation_classes(seg)
+    #seg = merge_segmentation_classes(seg)
+    seg = np.stack([np.around(resize(seg[:, :, :, i])) for i in range(seg.shape[-1])], axis=-1)
+    seg[seg > 1] = 1
+    seg[seg < 0] = 0
     seg = seg.astype(int)
     nib.save(nib.Nifti1Image(seg, None), output_file)
 
