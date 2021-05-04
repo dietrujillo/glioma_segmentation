@@ -18,7 +18,7 @@ from training.dataloader import BraTSDataLoader
 from training.metrics import METRICS
 
 
-def init_random_seed(random_state: int = RANDOM_SEED):
+def init_random_seed(random_state: int = RANDOM_SEED) -> None:
     """
     Initializes all random number generators with a random seed.
     :param random_state: Random seed.
@@ -28,13 +28,21 @@ def init_random_seed(random_state: int = RANDOM_SEED):
     tf.random.set_seed(random_state)
 
 
-def setup_gpu():
+def setup_gpu() -> None:
+    """
+    Set tensorflow_allow_gpu_growth to True.
+    :return: None.
+    """
     cfg = tf.compat.v1.ConfigProto()
     cfg.gpu_options.allow_growth = True
     tf.compat.v1.keras.backend.set_session(tf.compat.v1.Session(config=cfg))
 
 
-def cleanup():
+def cleanup() -> None:
+    """
+    Clean session and memory after training.
+    :return: None.
+    """
     gc.collect()
     sess = tf.compat.v1.keras.backend.get_session()
     sess.close()

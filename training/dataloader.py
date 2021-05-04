@@ -49,7 +49,7 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
 
     def __getitem__(self, item: int) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Gets batch in index "item"
+        Gets batch at index "item"
         :param item: index of batch to load.
         :return: tuple of (data, labels) for batch arrays.
         """

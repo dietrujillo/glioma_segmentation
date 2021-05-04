@@ -1,5 +1,4 @@
 import os
-from training.loss import dice_loss
 
 # GLOBAL PARAMETERS
 RANDOM_SEED = 42
@@ -17,6 +16,8 @@ RESULTS_PATH = os.path.join(PROJECT_ROOT, "results")
 NO_AUGMENTATION_PROBABILITY = 0.5
 MAX_CROP_LIMIT = [(40, 196), (29, 222), (0, 148)]
 CROP_LIMIT = [(20, 220), (20, 220), (0, 156)]
+CROP_SHAPE = (200, 200, 144)
+RESIZE_SHAPE = (128, 128, 128)
 SEGMENTATION_CATEGORIES = [0., 1., 2., 4.]
 SEGMENTATION_MERGE_DICT = {
     0: tuple(),  # Enhancing tumor core does not merge
@@ -26,11 +27,11 @@ SEGMENTATION_MERGE_DICT = {
 
 # TRAINING
 DEFAULT_OPTIMIZER = "nadam"
-DEFAULT_LOSS = dice_loss
+DEFAULT_LOSS = "categorical_crossentropy"
 DEFAULT_EPOCHS = 30
 BATCH_SIZE = 32
 EARLY_STOPPING_PARAMS = {
-    "monitor": "val_dice_score",
+    "monitor": "val_weighted_dice_score",
     "min_delta": 0,
     "patience": 3,
     "baseline": None,

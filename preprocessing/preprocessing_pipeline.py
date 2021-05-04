@@ -13,7 +13,7 @@ from definitions import (
 )
 
 
-def crop(arr: np.array, lim: List[Tuple[int, int]] = CROP_LIMIT):
+def crop(arr: np.array, lim: List[Tuple[int, int]] = CROP_LIMIT) -> np.ndarray:
     """
     Crop a 3D array using the limits provided in CROP_LIMIT
     :param arr: array to be cropped

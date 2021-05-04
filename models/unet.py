@@ -1,4 +1,4 @@
-from typing import Tuple, AnyStr
+from typing import Tuple, AnyStr, Union
 
 import tensorflow as tf
 from tensorflow.keras.layers import (
@@ -12,14 +12,17 @@ class ConvBlock(tf.keras.layers.Layer):
     Convolutional layer, with batch normalization and an activation function.
     """
     def __init__(self, filters: int, kernel_size: Tuple[int, int, int],
-                 use_batch_norm: bool = True, activation: Activation = ReLU,
+                 use_batch_norm: bool = True, activation: Union[Activation, AnyStr] = ReLU,
                  name: AnyStr = "", **kwargs):
         super(ConvBlock, self).__init__(name=name, **kwargs)
         self.conv = Conv3D(filters, kernel_size, padding="same", name=name+"_conv")
         self.use_batch_norm = use_batch_norm
         if self.use_batch_norm:
             self.bn = BatchNormalization(name=name+"_bn")
-        self.activation = activation(name=name+"_act")
+        try:
+            self.activation = activation(name=name + "_act")
+        except ValueError:
+            self.activation = Activation(activation, name=name + "_act")
 
     def call(self, inputs, **kwargs):
         conv_output = self.conv(inputs)
@@ -43,7 +46,6 @@ class UNet(tf.keras.models.Model):
     """
     Basic U-Net model.
     """
-
     def __init__(self, **kwargs):
         super(UNet, self).__init__(**kwargs)
 
@@ -83,7 +85,7 @@ class UNet(tf.keras.models.Model):
         self.d1_l1 = ConvBlock(64, (3, 3, 3), name="d3_l1")
         self.d1_l2 = ConvBlock(32, (3, 3, 3), name="d3_l2")
 
-        self.out = ConvBlock(3, (1, 1, 1), name="out")
+        self.out = ConvBlock(3, (1, 1, 1), use_batch_norm=False, activation="sigmoid", name="out")
 
     def call(self, inputs, training=None, mask=None):
 
