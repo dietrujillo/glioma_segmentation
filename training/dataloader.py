@@ -62,6 +62,8 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
 
         for patient in batch_patients:
             patient_dir = os.path.join(self.data_path, patient)
+            if self.verbose:
+                print(f"Loading patient {patient}")
             try:
                 data = []
                 for scan_type in SCAN_TYPES:

@@ -21,7 +21,7 @@ class ConvBlock(tf.keras.layers.Layer):
             self.bn = BatchNormalization(name=name+"_bn")
         try:
             self.activation = activation(name=name + "_act")
-        except ValueError:
+        except TypeError:
             self.activation = Activation(activation, name=name + "_act")
 
     def call(self, inputs, **kwargs):

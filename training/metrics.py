@@ -1,5 +1,4 @@
 import tensorflow as tf
-
 from definitions import LOSS_WEIGHTS
 
 
@@ -26,7 +25,7 @@ def dice_wt(y_true, y_pred):
     :param y_pred: predictions.
     :return: Dice Score for the whole tumor.
     """
-    return dice_score(y_true[:, :, :, 1], y_pred[:, :, :, 1])
+    return dice_score(y_true[:, :, :, :, 1], y_pred[:, :, :, :, 1])
 
 
 def dice_tc(y_true, y_pred):
@@ -36,7 +35,7 @@ def dice_tc(y_true, y_pred):
     :param y_pred: predictions.
     :return: Dice Score for the tumor core.
     """
-    return dice_score(y_true[:, :, :, 2], y_pred[:, :, :, 2])
+    return dice_score(y_true[:, :, :, :, 2], y_pred[:, :, :, :, 2])
 
 
 def dice_etc(y_true, y_pred):
@@ -46,7 +45,7 @@ def dice_etc(y_true, y_pred):
     :param y_pred: predictions.
     :return: Dice Score for the enhancing tumor core.
     """
-    return dice_score(y_true[:, :, :, 0], y_pred[:, :, :, 0])
+    return dice_score(y_true[:, :, :, :, 0], y_pred[:, :, :, :, 0])
 
 
 def weighted_dice_score(y_true, y_pred):
