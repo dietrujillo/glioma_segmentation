@@ -19,6 +19,7 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
                  augment: bool = False,
                  batch_size: int = BATCH_SIZE,
                  shuffle_all: bool = True,
+                 shuffle_batch: bool = True,
                  verbose: bool = False):
         """
         Loads data iteratively from disk.
@@ -27,6 +28,7 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
         :param augment: whether to perform online data augmentation.
         :param batch_size: how many patients per batch to load.
         :param shuffle_all: whether to shuffle patients before loading anything
+        :param shuffle_batch: whether to shuffle patient order inside the batch.
         :param verbose: whether to inform of any missing files.
         """
         self.data_path = data_path
@@ -42,6 +44,7 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
         self.augment = augment
         self.batch_size = batch_size
         self.shuffle_all = shuffle_all
+        self.shuffle_batch = shuffle_batch
         self.verbose = verbose
 
     def __len__(self) -> int:
@@ -57,6 +60,9 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
             batch_patients = self.patients[self.batch_size * item:]
         else:
             batch_patients = self.patients[self.batch_size * item:self.batch_size * (item + 1)]
+
+        if self.shuffle_batch:
+            np.random.shuffle(batch_patients)
 
         data_batch, seg_batch = [], []
 
