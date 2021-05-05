@@ -14,17 +14,13 @@ PREPROCESSED_DATA_PATH = os.path.join(PROJECT_ROOT, "preprocessed")
 RESULTS_PATH = os.path.join(PROJECT_ROOT, "results")
 
 # PREPROCESSING & AUGMENTATION
-NO_AUGMENTATION_PROBABILITY = 0.5
 MAX_CROP_LIMIT = [(40, 196), (29, 222), (0, 148)]
 CROP_LIMIT = [(20, 220), (20, 220), (6, 150)]
 CROP_SHAPE = (200, 200, 144)
 RESIZE_SHAPE = (128, 128, 96)
 SEGMENTATION_CATEGORIES = [0., 1., 2., 4.]
-SEGMENTATION_MERGE_DICT = {
-    0: tuple(),  # Enhancing tumor core does not merge
-    1: (0, 2),  # All of the tumor regions form the whole tumor
-    2: (0,)  # The two innermost tumor regions form the tumor core
-}
+NO_AUGMENTATION_PROBABILITY = 0.5
+ROTATION_MAX_DEGREES = (-1, 1)
 
 # TRAINING
 DEFAULT_COMPUTING_DEVICE = "/device:GPU:0"

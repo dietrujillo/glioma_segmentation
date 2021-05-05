@@ -1,6 +1,6 @@
 import glob
 import os
-from typing import AnyStr, List, Tuple, Dict, Any
+from typing import AnyStr, List, Tuple, Any
 
 import dask
 import nibabel as nib
@@ -11,7 +11,7 @@ from scipy.ndimage import zoom
 
 from definitions import (
     DATA_PATH, PREPROCESSED_DATA_PATH, SCAN_TYPES,
-    CROP_LIMIT, SEGMENTATION_CATEGORIES, SEGMENTATION_MERGE_DICT,
+    CROP_LIMIT, SEGMENTATION_CATEGORIES,
     CROP_SHAPE, RESIZE_SHAPE
 )
 
@@ -46,9 +46,9 @@ def scale(arr: np.ndarray) -> np.ndarray:
     :param arr: array to be scaled.
     :return: scaled array.
     """
-    min_value = np.min(arr)
+    min_value = arr[0, 0, 0]
     max_value = np.max(arr)
-    return (arr - min_value) / (max_value - min_value)
+    return np.clip((arr - min_value) / (max_value - min_value), 0, 1)
 
 
 def preprocess_scan(filepath: AnyStr, output_file: AnyStr) -> None:
@@ -97,22 +97,6 @@ def one_hot_encode_segmentation(arr: np.ndarray, categories: List[Any] = SEGMENT
     return out
 
 
-def merge_segmentation_classes(arr: np.ndarray,
-                               merge_dict: Dict[int, Tuple[int]] = SEGMENTATION_MERGE_DICT) -> np.ndarray:
-    """
-    Merges some segmentation classes together.
-    For example, classes 1, 2 and 4 combine to form the whole tumor.
-    :param arr: array to be modified.
-    :param merge_dict: segmentation classes to merge.
-    :return: modified array.
-    """
-    for index, values in merge_dict.items():
-        for value in values:
-            arr[:, :, :, index] |= arr[:, :, :, value]
-
-    return arr
-
-
 def preprocess_segmentation(filepath: AnyStr, output_file: AnyStr) -> None:
     """
     Apply preprocessing pipeline to the segmentation ground truth.
@@ -123,10 +107,8 @@ def preprocess_segmentation(filepath: AnyStr, output_file: AnyStr) -> None:
     seg = nib.load(filepath).get_fdata()
     seg = crop(seg)
     seg = one_hot_encode_segmentation(seg, categories=SEGMENTATION_CATEGORIES)
-    #seg = merge_segmentation_classes(seg)
-    seg = np.stack([np.around(resize(seg[:, :, :, i])) for i in range(seg.shape[-1])], axis=-1)
-    seg[seg > 1] = 1
-    seg[seg < 0] = 0
+    seg = np.stack([np.around(resize(seg[..., i])) for i in range(seg.shape[-1])], axis=-1)
+    seg = np.clip(seg, 0, 1)
     seg = seg.astype(int)
     nib.save(nib.Nifti1Image(seg, None), output_file)
 

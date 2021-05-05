@@ -3,4 +3,5 @@ numpy~=1.19.5
 mayavi~=4.7.2
 dask~=2021.3.1
 tensorflow~=2.4.1
-matplotlib~=3.3.4
+matplotlib~=3.4.1
+scipy~=1.6.1
