@@ -75,6 +75,7 @@ def train(training_id: AnyStr,
     :param epochs: maximum number of epochs (early stopping enabled by default)
     :param batch_size: batch size.
     :param early_stopping_params: dict with params for tf.keras.callbacks.EarlyStopping.
+    :param computing_device: device for TensorFlow training loop.
     :param random_state: seed for the random number generator.
     :return: History object with training results.
     """

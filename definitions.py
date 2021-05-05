@@ -1,10 +1,11 @@
 import os
+import tensorflow as tf
 
 # GLOBAL PARAMETERS
 RANDOM_SEED = 42
 SCAN_TYPES = ("t1", "t2", "flair", "t1ce")
 INPUT_DATA_SHAPE = (240, 240, 155)
-PREPROCESSED_DATA_SHAPE = (200, 200, 144)
+PREPROCESSED_DATA_SHAPE = (128, 128, 96)
 
 # FILE PATHS
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -30,12 +31,15 @@ DEFAULT_COMPUTING_DEVICE = "/device:GPU:0"
 DEFAULT_OPTIMIZER = "nadam"
 DEFAULT_LOSS = "categorical_crossentropy"
 DEFAULT_EPOCHS = 30
-BATCH_SIZE = 32
+BATCH_SIZE = 4
 EARLY_STOPPING_PARAMS = {
     "monitor": "val_weighted_dice_score",
     "min_delta": 0,
-    "patience": 3,
+    "patience": 1,
     "baseline": None,
     "restore_best_weights": True
 }
 LOSS_WEIGHTS = [0.2, 0.35, 0.45]
+LOSS_WEIGHTS_TENSOR = tf.stack([tf.fill(PREPROCESSED_DATA_SHAPE, loss_weight)
+                                for loss_weight in LOSS_WEIGHTS], axis=-1)
+
