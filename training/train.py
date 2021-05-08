@@ -56,8 +56,7 @@ def build_model(model_class: type,
                 input_shape: Tuple[int] = (None, *PREPROCESSED_DATA_SHAPE, len(SCAN_TYPES)),
                 optimizer: Union[AnyStr, tf.keras.optimizers.Optimizer] = DEFAULT_OPTIMIZER,
                 loss: Union[AnyStr, tf.keras.losses.Loss, Callable] = DEFAULT_LOSS,
-                metrics: Iterable[tf.keras.metrics.Metric] = METRICS,
-                compute_devices: List[AnyStr] = DEFAULT_COMPUTE_DEVICES) -> Model:
+                metrics: Iterable[tf.keras.metrics.Metric] = METRICS) -> Model:
     """
     Builds a model, with optional model parallelism.
     :param model_class: Subclass of tf.keras.models.Model
@@ -66,21 +65,14 @@ def build_model(model_class: type,
     :param optimizer: optimizer to use.
     :param loss: loss function to use.
     :param metrics: metrics to use.
-    :param compute_devices: list of str representing CPUs, GPUs or TPUs for the model.
     :return: built and compiled model.
     """
 
     if model_params is None:
         model_params = {}
 
-    if len(compute_devices) >= 1:
-        with tf.distribute.MirroredStrategy(compute_devices).scope():
-            model = model_class(**model_params)
-            model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
-    else:
-        model = model_class(**model_params)
-        model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
-
+    model = model_class(**model_params)
+    model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
     model.build(input_shape=input_shape)
 
     print(model.summary())
@@ -94,9 +86,7 @@ def train(training_id: AnyStr,
           val_data_path: str = DATA_PATH,
           epochs: int = DEFAULT_EPOCHS,
           batch_size: int = BATCH_SIZE,
-          early_stopping_params: Dict[AnyStr, Any] = EARLY_STOPPING_PARAMS,
-          compute_device: AnyStr = DEFAULT_COMPUTE_DEVICES,
-          random_state: int = RANDOM_SEED) -> None:
+          early_stopping_params: Dict[AnyStr, Any] = EARLY_STOPPING_PARAMS) -> None:
     """
     Trains a model.
     :param training_id: identifier for the training run. Must be unique.
@@ -106,13 +96,8 @@ def train(training_id: AnyStr,
     :param epochs: maximum number of epochs (early stopping enabled by default)
     :param batch_size: batch size.
     :param early_stopping_params: dict with params for tf.keras.callbacks.EarlyStopping.
-    :param compute_device: device for TensorFlow training loop.
-    :param random_state: seed for the random number generator.
     :return: History object with training results.
     """
-
-    if random_state is not None:
-        init_random_seed(random_state)
 
     results_dir = os.path.join(RESULTS_PATH, training_id)
     os.makedirs(results_dir, exist_ok=False)
@@ -125,15 +110,9 @@ def train(training_id: AnyStr,
 
     print(f"Start training of model {training_id}.")
 
-    if len(compute_device) == 1:
-        with tf.device(compute_device):
-            history = model.fit(BraTSDataLoader(data_path, augment=False, batch_size=batch_size), epochs=epochs,
-                                validation_data=BraTSDataLoader(val_data_path, augment=False, batch_size=batch_size),
-                                batch_size=batch_size, validation_batch_size=batch_size, callbacks=callbacks)
-    else:
-        history = model.fit(BraTSDataLoader(data_path, augment=False, batch_size=batch_size), epochs=epochs,
-                            validation_data=BraTSDataLoader(val_data_path, augment=False, batch_size=batch_size),
-                            batch_size=batch_size, validation_batch_size=batch_size, callbacks=callbacks)
+    history = model.fit(BraTSDataLoader(data_path, augment=False, batch_size=batch_size), epochs=epochs,
+                        validation_data=BraTSDataLoader(val_data_path, augment=False, batch_size=batch_size),
+                        callbacks=callbacks)
 
     print(f"Training of model {training_id} finished.")
     cleanup()
@@ -145,10 +124,16 @@ def train(training_id: AnyStr,
 
 if __name__ == '__main__':
 
+    init_random_seed(RANDOM_SEED)
     setup_gpu()
-    u_net = build_model(UNet, optimizer="nadam", loss=dice_loss)
 
-    train("1", u_net,
-          data_path="preprocessed/MICCAI_BraTS2020_TrainingData/HGG",
-          val_data_path="preprocessed/MICCAI_BraTS_2019_Data_Training/HGG",
-          batch_size=1)
+    distribution = tf.distribute.MirroredStrategy(DEFAULT_COMPUTE_DEVICES)
+
+    with distribution.scope():
+
+        u_net = build_model(UNet, optimizer="nadam", loss=dice_loss)
+
+        train("11_merge_patience_5", u_net,
+              data_path="preprocessed/MICCAI_BraTS_2019_Data_Training/HGG", 
+              val_data_path="preprocessed/MICCAI_BraTS_2018_Data_Training/HGG", 
+              batch_size=8)

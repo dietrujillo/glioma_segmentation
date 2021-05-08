@@ -49,7 +49,7 @@ def dice_etc(y_true, y_pred):
 
 
 def weighted_dice_score(y_true, y_pred):
-    scores = [dice_wt(y_true, y_pred), dice_tc(y_true, y_pred), dice_etc(y_true, y_pred)]
+    scores = [dice_etc(y_true, y_pred), dice_wt(y_true, y_pred), dice_tc(y_true, y_pred)]
     return sum(LOSS_WEIGHTS[i] * score for i, score in enumerate(scores))
 
 

@@ -20,6 +20,11 @@ RESIZE_SHAPE = (128, 128, 96)
 SEGMENTATION_CATEGORIES = [0., 1., 2., 4.]
 NO_AUGMENTATION_PROBABILITY = 0.5
 ROTATION_MAX_DEGREES = (-2, 2)
+SEGMENTATION_MERGE_DICT = {
+    0: tuple(),  # Enhancing tumor core does not merge
+    1: (0, 2),  # All of the tumor regions form the whole tumor
+    2: (0,)  # The two innermost tumor regions form the tumor core
+}
 
 # TRAINING
 DEFAULT_COMPUTE_DEVICES = ["/device:GPU:0"]
@@ -30,10 +35,11 @@ BATCH_SIZE = 4
 EARLY_STOPPING_PARAMS = {
     "monitor": "val_weighted_dice_score",
     "min_delta": 0,
-    "patience": 1,
+    "patience": 5,
+    "mode": "max",
     "baseline": None,
     "restore_best_weights": True
 }
-LOSS_WEIGHTS = [0.2, 0.35, 0.45]
+LOSS_WEIGHTS = [0.45, 0.2, 0.35]
 
 
