@@ -1,6 +1,7 @@
 import gc
+import json
 import os
-from typing import Union, AnyStr, Iterable, Dict, Any, Tuple, Callable
+from typing import Union, AnyStr, Iterable, Dict, Any, Tuple, Callable, List
 
 import numpy as np
 import tensorflow as tf
@@ -12,9 +13,11 @@ from definitions import (
     PREPROCESSED_DATA_SHAPE, SCAN_TYPES,
     DEFAULT_OPTIMIZER, DEFAULT_LOSS, DEFAULT_EPOCHS,
     EARLY_STOPPING_PARAMS, BATCH_SIZE,
-    DEFAULT_COMPUTING_DEVICE, RANDOM_SEED
+    DEFAULT_COMPUTE_DEVICES, RANDOM_SEED
 )
+from models.unet import UNet
 from training.dataloader import BraTSDataLoader
+from training.loss import dice_loss
 from training.metrics import METRICS
 
 
@@ -30,7 +33,7 @@ def init_random_seed(random_state: int = RANDOM_SEED) -> None:
 
 def setup_gpu() -> None:
     """
-    Set tensorflow_allow_gpu_growth to True.
+    Set TF_ALLOW_GPU_GROWTH to True.
     :return: None.
     """
     cfg = tf.compat.v1.ConfigProto()
@@ -48,45 +51,68 @@ def cleanup() -> None:
     sess.close()
 
 
+def build_model(model_class: type,
+                model_params=None,
+                input_shape: Tuple[int] = (None, *PREPROCESSED_DATA_SHAPE, len(SCAN_TYPES)),
+                optimizer: Union[AnyStr, tf.keras.optimizers.Optimizer] = DEFAULT_OPTIMIZER,
+                loss: Union[AnyStr, tf.keras.losses.Loss, Callable] = DEFAULT_LOSS,
+                metrics: Iterable[tf.keras.metrics.Metric] = METRICS,
+                compute_devices: List[AnyStr] = DEFAULT_COMPUTE_DEVICES) -> Model:
+    """
+    Builds a model, with optional model parallelism.
+    :param model_class: Subclass of tf.keras.models.Model
+    :param model_params: arguments for model_class initializer.
+    :param input_shape: expected input shape for the model.
+    :param optimizer: optimizer to use.
+    :param loss: loss function to use.
+    :param metrics: metrics to use.
+    :param compute_devices: list of str representing CPUs, GPUs or TPUs for the model.
+    :return: built and compiled model.
+    """
+
+    if model_params is None:
+        model_params = {}
+
+    if len(compute_devices) >= 1:
+        with tf.distribute.MirroredStrategy(compute_devices).scope():
+            model = model_class(**model_params)
+            model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+    else:
+        model = model_class(**model_params)
+        model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+
+    model.build(input_shape=input_shape)
+
+    print(model.summary())
+
+    return model
+
+
 def train(training_id: AnyStr,
           model: Model,
           data_path: str = DATA_PATH,
           val_data_path: str = DATA_PATH,
-          input_shape: Tuple[int] = (None, *PREPROCESSED_DATA_SHAPE, len(SCAN_TYPES)),
-          optimizer: Union[AnyStr, tf.keras.optimizers.Optimizer] = DEFAULT_OPTIMIZER,
-          loss: Union[AnyStr, tf.keras.losses.Loss, Callable] = DEFAULT_LOSS,
-          metrics: Iterable[tf.keras.metrics.Metric] = METRICS,
           epochs: int = DEFAULT_EPOCHS,
           batch_size: int = BATCH_SIZE,
           early_stopping_params: Dict[AnyStr, Any] = EARLY_STOPPING_PARAMS,
-          computing_device: AnyStr = DEFAULT_COMPUTING_DEVICE,
-          random_state: int = RANDOM_SEED) \
-        -> tf.keras.callbacks.History:
+          compute_device: AnyStr = DEFAULT_COMPUTE_DEVICES,
+          random_state: int = RANDOM_SEED) -> None:
     """
     Trains a model.
     :param training_id: identifier for the training run. Must be unique.
     :param model: model to train. Must be an instance of tf.keras.models.Model.
     :param data_path: path to training data.
     :param val_data_path: path to validation data.
-    :param input_shape: input shape.
-    :param optimizer: optimizer to use.
-    :param loss: loss function to use.
-    :param metrics: metrics to use.
     :param epochs: maximum number of epochs (early stopping enabled by default)
     :param batch_size: batch size.
     :param early_stopping_params: dict with params for tf.keras.callbacks.EarlyStopping.
-    :param computing_device: device for TensorFlow training loop.
+    :param compute_device: device for TensorFlow training loop.
     :param random_state: seed for the random number generator.
     :return: History object with training results.
     """
-    setup_gpu()
+
     if random_state is not None:
         init_random_seed(random_state)
-
-    model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
-    model.build(input_shape=input_shape)
-
-    print(model.summary())
 
     results_dir = os.path.join(RESULTS_PATH, training_id)
     os.makedirs(results_dir, exist_ok=False)
@@ -99,7 +125,12 @@ def train(training_id: AnyStr,
 
     print(f"Start training of model {training_id}.")
 
-    with tf.device(computing_device):
+    if len(compute_device) == 1:
+        with tf.device(compute_device):
+            history = model.fit(BraTSDataLoader(data_path, augment=False, batch_size=batch_size), epochs=epochs,
+                                validation_data=BraTSDataLoader(val_data_path, augment=False, batch_size=batch_size),
+                                batch_size=batch_size, validation_batch_size=batch_size, callbacks=callbacks)
+    else:
         history = model.fit(BraTSDataLoader(data_path, augment=False, batch_size=batch_size), epochs=epochs,
                             validation_data=BraTSDataLoader(val_data_path, augment=False, batch_size=batch_size),
                             batch_size=batch_size, validation_batch_size=batch_size, callbacks=callbacks)
@@ -108,5 +139,16 @@ def train(training_id: AnyStr,
     cleanup()
 
     model.save(os.path.join(results_dir, "model.tf"), save_format="tf")
+    with open(os.path.join(results_dir, "history.json"), "w") as file:
+        json.dump(history.history, file, indent=4)
 
-    return history
+
+if __name__ == '__main__':
+
+    setup_gpu()
+    u_net = build_model(UNet, optimizer="nadam", loss=dice_loss)
+
+    train("1", u_net,
+          data_path="preprocessed/MICCAI_BraTS2020_TrainingData/HGG",
+          val_data_path="preprocessed/MICCAI_BraTS_2019_Data_Training/HGG",
+          batch_size=1)

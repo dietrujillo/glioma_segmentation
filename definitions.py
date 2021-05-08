@@ -1,5 +1,4 @@
 import os
-import tensorflow as tf
 
 # GLOBAL PARAMETERS
 RANDOM_SEED = 42
@@ -20,10 +19,10 @@ CROP_SHAPE = (200, 200, 144)
 RESIZE_SHAPE = (128, 128, 96)
 SEGMENTATION_CATEGORIES = [0., 1., 2., 4.]
 NO_AUGMENTATION_PROBABILITY = 0.5
-ROTATION_MAX_DEGREES = (-1, 1)
+ROTATION_MAX_DEGREES = (-2, 2)
 
 # TRAINING
-DEFAULT_COMPUTING_DEVICE = "/device:GPU:0"
+DEFAULT_COMPUTE_DEVICES = ["/device:GPU:0"]
 DEFAULT_OPTIMIZER = "nadam"
 DEFAULT_LOSS = "categorical_crossentropy"
 DEFAULT_EPOCHS = 30
@@ -36,6 +35,5 @@ EARLY_STOPPING_PARAMS = {
     "restore_best_weights": True
 }
 LOSS_WEIGHTS = [0.2, 0.35, 0.45]
-LOSS_WEIGHTS_TENSOR = tf.stack([tf.fill(PREPROCESSED_DATA_SHAPE, loss_weight)
-                                for loss_weight in LOSS_WEIGHTS], axis=-1)
+
 
