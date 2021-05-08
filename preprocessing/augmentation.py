@@ -3,6 +3,7 @@ from typing import Callable, Tuple
 import numpy as np
 from scipy.ndimage import rotate
 from definitions import SCAN_TYPES, NO_AUGMENTATION_PROBABILITY, ROTATION_MAX_DEGREES
+from preprocessing.preprocessing_pipeline import remove_interpolated_background
 
 
 def _augmentation(apply_to_label: bool = False) \
@@ -72,10 +73,10 @@ def _gaussian_noise(arr: np.ndarray, random_state: int = None) -> np.ndarray:
     q1 = np.percentile(arr[arr != 0], 25)
     q3 = np.percentile(arr[arr != 0], 75)
     iqr = q3 - q1
-    nominal_range = q1 - (1.5 * iqr), q3 + (1.5 * iqr)
+    nominal_range = q1 + (0.1 * iqr), q3 - (0.1 * iqr)
 
-    sigma = arr[arr != 0].std()
-    noise = np.where(arr == 0, 0, random_state.normal(0, sigma, size=arr.shape))
+    sigma = 0.1
+    noise = np.where(arr == 0, np.zeros_like(arr), random_state.normal(0, sigma, size=arr.shape))
 
     ret = np.where((nominal_range[0] <= arr + noise) & (arr + noise <= nominal_range[1]), arr + noise, arr)
     return ret
@@ -93,7 +94,9 @@ def _rotation(arr: np.ndarray, random_state: int = None) -> np.ndarray:
 
     degree = random_state.uniform(*ROTATION_MAX_DEGREES)
     rotation_plane = tuple(random_state.choice(3, replace=False, size=2))
-    return np.clip(rotate(arr, angle=degree, axes=rotation_plane, reshape=False), 0, 1)
+    rotation = remove_interpolated_background(rotate)(arr, angle=degree, axes=rotation_plane, reshape=False)
+    return np.clip(rotation, 0, 1)
+
 
 
 _AUGMENTATIONS = (_sagittal_flip, _gaussian_noise, _rotation)

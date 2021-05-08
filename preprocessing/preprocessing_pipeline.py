@@ -1,6 +1,6 @@
 import glob
 import os
-from typing import AnyStr, List, Tuple, Any
+from typing import AnyStr, List, Tuple, Any, Callable
 
 import dask
 import nibabel as nib
@@ -16,6 +16,16 @@ from definitions import (
 )
 
 
+def remove_interpolated_background(transformation: Callable, background_val: float = 0.0, tol: float = .1):
+
+    def _remove_background(arr: np.ndarray, **kwargs) -> np.ndarray:
+        arr = transformation(arr, **kwargs)
+        arr[(arr >= background_val - tol) & (arr <= background_val + tol)] = background_val
+        return arr
+
+    return _remove_background
+
+
 def resize(arr: np.ndarray,
            input_shape: Tuple[int, int, int] = CROP_SHAPE,
            output_shape: Tuple[int, int, int] = RESIZE_SHAPE) -> np.ndarray:
@@ -27,7 +37,7 @@ def resize(arr: np.ndarray,
     :return: resized array.
     """
     factor = [b / a for a, b in zip(input_shape, output_shape)]
-    return zoom(arr, zoom=factor)
+    return remove_interpolated_background(zoom)(arr, zoom=factor)
 
 
 def crop(arr: np.array, lim: List[Tuple[int, int]] = CROP_LIMIT) -> np.ndarray:
