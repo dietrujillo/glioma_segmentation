@@ -73,11 +73,11 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
             try:
                 data = []
                 for scan_type in SCAN_TYPES:
-                    scan = nib.load(os.path.join(patient_dir, f"{patient}_{scan_type}.nii.gz")).get_fdata()
+                    scan = nib.load(os.path.join(patient_dir, f"{patient}_{scan_type}.nii")).get_fdata()
                     data.append(scan)
 
                 data = np.stack(data, axis=-1)
-                seg = nib.load(os.path.join(patient_dir, f"{patient}_seg.nii.gz")).get_fdata()
+                seg = nib.load(os.path.join(patient_dir, f"{patient}_seg.nii")).get_fdata()
 
                 if self.augment:
                     data, seg = apply_augmentation(data, seg)

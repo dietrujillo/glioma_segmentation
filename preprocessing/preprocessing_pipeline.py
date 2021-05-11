@@ -110,7 +110,7 @@ def one_hot_encode_segmentation(arr: np.ndarray, categories: List[Any] = SEGMENT
 
     out = np.zeros((*arr.shape, len(categories)), dtype=int)
     for index, cat in enumerate(categories):
-        out[:, :, :, index][arr == cat] = 1
+        out[..., index][arr == cat] = 1
     return out
 
 
@@ -125,7 +125,7 @@ def merge_segmentation_classes(arr: np.ndarray,
     """
     for index, values in merge_dict.items():
         for value in values:
-            arr[:, :, :, index] |= arr[:, :, :, value]
+            arr[..., index] |= arr[..., value]
 
     return arr
 
@@ -161,11 +161,11 @@ def preprocess_patient(patient_dir: AnyStr, output_dir: AnyStr) -> None:
         for scan_type in SCAN_TYPES:
             matches = glob.glob(os.path.join(patient_dir, f"*{scan_type}.nii.gz"))
             assert len(matches) == 1
-            preprocess_scan(matches[0], os.path.join(output_dir, os.path.basename(matches[0])))
+            preprocess_scan(matches[0], os.path.join(output_dir, os.path.basename(matches[0]).replace(".gz", "")))
 
         matches = glob.glob(os.path.join(patient_dir, f"*seg.nii.gz"))
         assert len(matches) == 1
-        preprocess_segmentation(matches[0], os.path.join(output_dir, os.path.basename(matches[0])))
+        preprocess_segmentation(matches[0], os.path.join(output_dir, os.path.basename(matches[0]).replace(".gz", "")))
     except AssertionError:
         print(f"\nPatient {os.path.basename(patient_dir)} had errors when loading some files.")
 
