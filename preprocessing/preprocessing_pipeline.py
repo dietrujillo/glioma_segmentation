@@ -16,14 +16,21 @@ from definitions import (
 )
 
 
-def remove_interpolated_background(transformation: Callable, background_val: float = 0.0, tol: float = .1):
-
-    def _remove_background(arr: np.ndarray, **kwargs) -> np.ndarray:
+def remove_background_fuzz(transformation: Callable, background_val: float = 0.0, tol: float = .1):
+    """
+    Remove background fuzz added by an interpolation transformation.
+    Values in [background_val - tol, background_val + tol] will be reset to background_val.
+    :param transformation: transformation function.
+    :param background_val: value to be considered as background.
+    :param tol: tolerance.
+    :return:
+    """
+    def _remove_background_fuzz(arr: np.ndarray, **kwargs) -> np.ndarray:
         arr = transformation(arr, **kwargs)
         arr[(arr >= background_val - tol) & (arr <= background_val + tol)] = background_val
         return arr
 
-    return _remove_background
+    return _remove_background_fuzz
 
 
 def resize(arr: np.ndarray,
@@ -37,7 +44,7 @@ def resize(arr: np.ndarray,
     :return: resized array.
     """
     factor = [b / a for a, b in zip(input_shape, output_shape)]
-    return remove_interpolated_background(zoom)(arr, zoom=factor)
+    return remove_background_fuzz(zoom)(arr, zoom=factor)
 
 
 def crop(arr: np.array, lim: List[Tuple[int, int]] = CROP_LIMIT) -> np.ndarray:

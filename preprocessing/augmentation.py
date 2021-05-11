@@ -3,7 +3,7 @@ from typing import Callable, Tuple
 import numpy as np
 from scipy.ndimage import rotate
 from definitions import SCAN_TYPES, NO_AUGMENTATION_PROBABILITY, ROTATION_MAX_DEGREES
-from preprocessing.preprocessing_pipeline import remove_interpolated_background
+from preprocessing.preprocessing_pipeline import remove_background_fuzz
 
 
 def _augmentation(apply_to_label: bool = False) \
@@ -60,7 +60,7 @@ def _gaussian_noise(arr: np.ndarray, random_state: int = None) -> np.ndarray:
     as to avoid taking the background of the image into account.
 
     Values of noise resulting in array values outside of the nominal range
-    (i.e. [Q1 - 3/2 * IQR, Q3 + 3/2 * IQR],
+    (defined as [Q1 + 0.1 * IQR, Q3 - 0.1 * IQR] for this problem,
     where Q1 and Q3 are the first and third quartiles respectively and IQR is the interquartile range)
     are excluded and not applied.
 
@@ -94,7 +94,7 @@ def _rotation(arr: np.ndarray, random_state: int = None) -> np.ndarray:
 
     degree = random_state.uniform(*ROTATION_MAX_DEGREES)
     rotation_plane = tuple(random_state.choice(3, replace=False, size=2))
-    rotation = remove_interpolated_background(rotate)(arr, angle=degree, axes=rotation_plane, reshape=False)
+    rotation = remove_background_fuzz(rotate)(arr, angle=degree, axes=rotation_plane, reshape=False)
     return np.clip(rotation, 0, 1)
 
 

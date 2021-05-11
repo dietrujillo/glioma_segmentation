@@ -48,7 +48,7 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
         self.verbose = verbose
 
     def __len__(self) -> int:
-        return len(self.patients) // self.batch_size + 1
+        return np.ceil(len(self.patients) / self.batch_size)
 
     def __getitem__(self, item: int) -> Tuple[np.ndarray, np.ndarray]:
         """
