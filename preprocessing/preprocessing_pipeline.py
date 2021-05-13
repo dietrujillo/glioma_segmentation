@@ -148,12 +148,13 @@ def preprocess_segmentation(filepath: AnyStr, output_file: AnyStr) -> None:
 
 
 @dask.delayed
-def preprocess_patient(patient_dir: AnyStr, output_dir: AnyStr) -> None:
+def preprocess_patient(patient_dir: AnyStr, output_dir: AnyStr, process_seg: bool = True) -> None:
     """
     Preprocess a whole patient, applying both the MRI scans and the
     segmentation ground truth their respective pipelines.
     :param patient_dir: directory with patient files.
     :param output_dir: directory for the results of the pipeline.
+    :param process_seg: whether to try to preprocess segmentation labels.
     :return: None
     """
     os.makedirs(output_dir, exist_ok=True)
@@ -163,19 +164,22 @@ def preprocess_patient(patient_dir: AnyStr, output_dir: AnyStr) -> None:
             assert len(matches) == 1
             preprocess_scan(matches[0], os.path.join(output_dir, os.path.basename(matches[0]).replace(".gz", "")))
 
-        matches = glob.glob(os.path.join(patient_dir, f"*seg.nii.gz"))
-        assert len(matches) == 1
-        preprocess_segmentation(matches[0], os.path.join(output_dir, os.path.basename(matches[0]).replace(".gz", "")))
+        if process_seg:
+            matches = glob.glob(os.path.join(patient_dir, f"*seg.nii.gz"))
+            assert len(matches) == 1
+            preprocess_segmentation(matches[0], os.path.join(output_dir, os.path.basename(matches[0]).replace(".gz", "")))
     except AssertionError:
         print(f"\nPatient {os.path.basename(patient_dir)} had errors when loading some files.")
 
 
 def preprocessing_pipeline(data_path: AnyStr = DATA_PATH,
-                           output_path: AnyStr = PREPROCESSED_DATA_PATH) -> None:
+                           output_path: AnyStr = PREPROCESSED_DATA_PATH,
+                           process_seg: bool = True) -> None:
     """
     Parallelize the `preprocess_patient` function for every patient.
     :param data_path: input directory containing all patient dirs.
     :param output_path: output directory for the preprocessing results.
+    :param process_seg: whether to try to preprocess segmentation labels.
     :return: None
     """
     delayed_operations = []
@@ -183,13 +187,14 @@ def preprocessing_pipeline(data_path: AnyStr = DATA_PATH,
         patient_input_path = os.path.join(data_path, patient_dir)
         if os.path.isdir(patient_input_path):
             patient_output_path = os.path.join(output_path, patient_dir)
-            delayed_operations.append(preprocess_patient(patient_input_path, patient_output_path))
+            delayed_operations.append(preprocess_patient(patient_input_path, patient_output_path, process_seg=process_seg))
 
     with ProgressBar():
         dask.compute(delayed_operations)
 
 
 if __name__ == '__main__':
+
     preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS2020_TrainingData/HGG"),
                            os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS2020_TrainingData/HGG"))
 
@@ -207,3 +212,6 @@ if __name__ == '__main__':
 
     preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS_2018_Data_Training/LGG"),
                            os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS_2018_Data_Training/LGG"))
+                               
+    preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS2020_ValidationData"),
+                           os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS2020_ValidationData"), process_seg=False)
