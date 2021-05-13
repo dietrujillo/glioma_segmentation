@@ -13,7 +13,7 @@ from definitions import (
     PREPROCESSED_DATA_SHAPE, SCAN_TYPES,
     DEFAULT_OPTIMIZER, DEFAULT_LOSS, DEFAULT_EPOCHS,
     EARLY_STOPPING_PARAMS, BATCH_SIZE,
-    DEFAULT_COMPUTE_DEVICES, RANDOM_SEED
+    COMPUTE_DEVICES, RANDOM_SEED
 )
 from models.unet import UNet
 from training.dataloader import BraTSDataLoader
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     init_random_seed(RANDOM_SEED)
     setup_gpu()
 
-    distribution = tf.distribute.MirroredStrategy(DEFAULT_COMPUTE_DEVICES)
+    distribution = tf.distribute.MirroredStrategy(COMPUTE_DEVICES)
 
     with distribution.scope():
 
