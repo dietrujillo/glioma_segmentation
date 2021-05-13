@@ -1,6 +1,8 @@
 from typing import List, Tuple
 
+import dask
 import numpy as np
+from dask.diagnostics import ProgressBar
 from scipy.ndimage import zoom
 
 from definitions import (
@@ -42,6 +44,7 @@ def undo_crop(arr: np.array,
                   constant_values=0)
 
 
+@dask.delayed
 def postprocess_segmentation(seg: np.ndarray) -> np.ndarray:
     """
     Apply postprocessing pipeline to the segmentation predictions.
@@ -50,10 +53,17 @@ def postprocess_segmentation(seg: np.ndarray) -> np.ndarray:
     """
 
     out = np.zeros(INPUT_DATA_SHAPE)
-    for segmentation_class in seg.shape[-1]:
+
+    for segmentation_class in range(seg.shape[-1]):
         before_resize = undo_resize(seg[..., segmentation_class])
         before_resize = np.clip(np.around(before_resize), 0, 1)
         before_crop = undo_crop(before_resize)
         out[before_crop == 1] = SEGMENTATION_CATEGORIES[segmentation_class + 1]
 
     return out
+
+
+def postprocessing_pipeline(predictions: np.ndarray) -> np.ndarray:
+    with ProgressBar():
+        results = dask.compute([postprocess_segmentation(x) for x in predictions])
+    return np.stack(results)
