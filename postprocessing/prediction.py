@@ -12,14 +12,16 @@ from training.metrics import dice_etc, dice_wt, dice_tc, weighted_dice_score
 
 if __name__ == '__main__':
 
-    model_path = os.path.join(RESULTS_PATH, "")
-    test_data_path = os.path.join(DATA_PATH, "")
-    preprocessed_test_data_path = os.path.join(PREPROCESSED_DATA_PATH, "")
-    predictions_path = os.path.join(PREPROCESSED_DATA_PATH, "")
+    model_path = os.path.join(RESULTS_PATH, "12_two_datasets_patience_10/model.tf")
+    test_data_path = os.path.join(DATA_PATH, "MICCAI_BraTS2020_ValidationData")
+    preprocessed_test_data_path = os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS2020_ValidationData")
+    predictions_path = os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS2020_ValidationPredictions")
+
+    os.makedirs(predictions_path, exist_ok=True)
 
     print("Preprocessing data...")
 
-    preprocessing_pipeline(test_data_path, preprocessed_test_data_path)
+    preprocessing_pipeline(test_data_path, preprocessed_test_data_path, process_seg=False)
 
     print("Loading model...")
 
@@ -31,9 +33,10 @@ if __name__ == '__main__':
 
     print("Evaluating...")
 
-    patients = os.listdir(preprocessed_test_data_path)
+    patients = sorted(os.listdir(preprocessed_test_data_path))
 
     data_loader = BraTSDataLoader(preprocessed_test_data_path, augment=False, patients=patients,
+                                  retrieve_seg=False, compressed_files=False,
                                   shuffle_all=False, shuffle_batch=False, batch_size=1,
                                   verbose=True)
 
@@ -41,6 +44,6 @@ if __name__ == '__main__':
 
     print("Post-processing predictions...")
 
-    for patient, prediction in zip(patients, predictions[0]):
+    for patient, prediction in zip(patients, predictions):
         seg = postprocess_segmentation(prediction)
         nib.save(nib.Nifti1Image(seg, None), os.path.join(predictions_path, f"{patient}.nii.gz"))
