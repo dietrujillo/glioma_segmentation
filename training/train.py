@@ -110,8 +110,9 @@ def train(training_id: AnyStr,
 
     print(f"Start training of model {training_id}.")
 
-    history = model.fit(BraTSDataLoader(data_path, augment=True, batch_size=batch_size), epochs=epochs,
+    history = model.fit(BraTSDataLoader(data_path, augment=True, batch_size=batch_size, subdivide_sectors=True),
                         validation_data=BraTSDataLoader(val_data_path, augment=False, batch_size=batch_size),
+                        epochs=epochs,
                         callbacks=callbacks)
 
     print(f"Training of model {training_id} finished.")

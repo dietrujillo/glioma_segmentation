@@ -1,5 +1,5 @@
 import os
-from typing import Optional, AnyStr, Iterable, Tuple, Union
+from typing import Optional, AnyStr, Iterable, Tuple, Union, List
 
 import nibabel as nib
 import numpy as np
@@ -17,6 +17,7 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
                  data_path: AnyStr,
                  patients: Optional[Iterable[AnyStr]] = None,
                  augment: bool = False,
+                 subdivide_sectors: bool = False,
                  batch_size: int = BATCH_SIZE,
                  shuffle_all: bool = True,
                  shuffle_batch: bool = True,
@@ -28,6 +29,7 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
         :param data_path: path to the data files.
         :param patients: which patient files to load.
         :param augment: whether to perform online data augmentation.
+        :param subdivide_sectors: whether to divide each array in patches before loading.
         :param batch_size: how many patients per batch to load.
         :param shuffle_all: whether to shuffle patients before loading anything
         :param shuffle_batch: whether to shuffle patient order inside the batch.
@@ -46,6 +48,7 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
             np.random.shuffle(self.patients)
 
         self.augment = augment
+        self.subdivide_sectors = subdivide_sectors
         self.batch_size = batch_size
         self.shuffle_all = shuffle_all
         self.shuffle_batch = shuffle_batch
@@ -95,9 +98,17 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
                 if self.augment and self.retrieve_seg:
                     data, seg = apply_augmentation(data, seg)
 
-                data_batch.append(data)
-                if self.retrieve_seg:
-                    seg_batch.append(seg)
+                if not self.subdivide_sectors:
+                    data_batch.append(data)
+                    if self.retrieve_seg:
+                        seg_batch.append(seg)
+                else:
+                    data = self._subdivide_sectors(data)
+                    data_batch.extend(data)
+                    if self.retrieve_seg:
+                        seg = self._subdivide_sectors(seg)
+                        seg_batch.extend(seg)
+
             except FileNotFoundError as e:
                 if self.verbose:
                     print(f"Missing file for patient {patient}: {e.filename}")
@@ -108,3 +119,20 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
             seg_batch = np.stack(seg_batch)
             return data_batch, seg_batch
         return data_batch
+
+    @staticmethod
+    def _subdivide_sectors(arr: np.ndarray, splits_per_axis: Tuple[int] = (2, 2, 2)) -> List[np.ndarray]:
+        """
+        Divide an array into equally-spaced patches.
+        :param arr: array to be divided.
+        :param splits_per_axis: number of divisions to apply for every axis.
+        :return: list containing all subdivisions of the original array.
+        """
+        previous_result = [arr]
+        for axis in range(len(splits_per_axis)):
+            current_result = []
+            for item in previous_result:
+                current_result.extend(np.array_split(item, indices_or_sections=splits_per_axis[axis], axis=axis))
+            previous_result = current_result
+
+        return previous_result
