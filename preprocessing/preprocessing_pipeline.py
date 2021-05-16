@@ -1,18 +1,18 @@
 import glob
 import os
+import shutil
 from typing import AnyStr, List, Tuple, Any, Callable, Dict
 
 import dask
 import nibabel as nib
 import numpy as np
 from dask.diagnostics import ProgressBar
-
 from scipy.ndimage import zoom
 
 from definitions import (
     DATA_PATH, PREPROCESSED_DATA_PATH, SCAN_TYPES,
     CROP_LIMIT, SEGMENTATION_CATEGORIES, SEGMENTATION_MERGE_DICT,
-    CROP_SHAPE, RESIZE_SHAPE
+    CROP_SHAPE, RESIZE_SHAPE, RANDOM_SEED
 )
 
 
@@ -162,12 +162,14 @@ def preprocess_patient(patient_dir: AnyStr, output_dir: AnyStr, process_seg: boo
         for scan_type in SCAN_TYPES:
             matches = glob.glob(os.path.join(patient_dir, f"*{scan_type}.nii.gz"))
             assert len(matches) == 1
-            preprocess_scan(matches[0], os.path.join(output_dir, os.path.basename(matches[0]).replace(".gz", "")))
+            preprocess_scan(matches[0], os.path.join(output_dir,
+                                                     os.path.basename(matches[0]).replace(".gz", "")))
 
         if process_seg:
             matches = glob.glob(os.path.join(patient_dir, f"*seg.nii.gz"))
             assert len(matches) == 1
-            preprocess_segmentation(matches[0], os.path.join(output_dir, os.path.basename(matches[0]).replace(".gz", "")))
+            preprocess_segmentation(matches[0], os.path.join(output_dir,
+                                                             os.path.basename(matches[0]).replace(".gz", "")))
     except AssertionError:
         print(f"\nPatient {os.path.basename(patient_dir)} had errors when loading some files.")
 
@@ -187,31 +189,62 @@ def preprocessing_pipeline(data_path: AnyStr = DATA_PATH,
         patient_input_path = os.path.join(data_path, patient_dir)
         if os.path.isdir(patient_input_path):
             patient_output_path = os.path.join(output_path, patient_dir)
-            delayed_operations.append(preprocess_patient(patient_input_path, patient_output_path, process_seg=process_seg))
+            delayed_operations.append(preprocess_patient(patient_input_path,
+                                                         patient_output_path,
+                                                         process_seg=process_seg))
 
     with ProgressBar():
         dask.compute(delayed_operations)
 
 
+def split_datasets(files: List[AnyStr],
+                   output_path: AnyStr,
+                   test_ratio: float = 0.2,
+                   random_seed: int = RANDOM_SEED) -> None:
+    """
+    Split preprocessed datasets into training and test sets.
+    :param files: paths pointing to preprocessed data.
+    :param output_path: path to contain the training and test directories.
+    :param test_ratio: proportion of the whole dataset to assign to test set. Must be a float between 0 and 1.
+    :param random_seed: random seed.
+    :return: None.
+    """
+    random_state = np.random.RandomState(random_seed)
+    random_state.shuffle(files)
+
+    limit = int(len(files) * test_ratio)
+
+    os.makedirs(os.path.join(output_path, "train"), exist_ok=True)
+    os.makedirs(os.path.join(output_path, "test"), exist_ok=True)
+
+    datasets = {
+        "train": files[limit:],
+        "test": files[:limit]
+    }
+
+    for dataset_name, file_names in datasets.items():
+        for dataset_file in file_names:
+            shutil.move(dataset_file, os.path.join(output_path, dataset_name, os.path.basename(dataset_file)))
+
+
 if __name__ == '__main__':
 
-    preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS2020_TrainingData/HGG"),
-                           os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS2020_TrainingData/HGG"))
+    data_dirs = [
+        "MICCAI_BraTS2020_TrainingData/HGG",
+        "MICCAI_BraTS2020_TrainingData/LGG",
+    ]
 
-    preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS2020_TrainingData/LGG"),
-                           os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS2020_TrainingData/LGG"))
+    for data_dir in data_dirs:
+        print(f"Preprocessing {data_dir}")
+        preprocessing_pipeline(os.path.join(DATA_PATH, data_dir),
+                               os.path.join(PREPROCESSED_DATA_PATH, data_dir))
 
-    preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS_2019_Data_Training/HGG"),
-                           os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS_2019_Data_Training/HGG"))
+    total_files = []
 
-    preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS_2019_Data_Training/LGG"),
-                           os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS_2019_Data_Training/LGG"))
+    for data_dir in data_dirs:
+        for file in os.listdir(os.path.join(PREPROCESSED_DATA_PATH, data_dir)):
+            total_files.append(os.path.join(PREPROCESSED_DATA_PATH, data_dir, file))
 
-    preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS_2018_Data_Training/HGG"),
-                           os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS_2018_Data_Training/HGG"))
-
-    preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS_2018_Data_Training/LGG"),
-                           os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS_2018_Data_Training/LGG"))
-                               
-    preprocessing_pipeline(os.path.join(DATA_PATH, "MICCAI_BraTS2020_ValidationData"),
-                           os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS2020_ValidationData"), process_seg=False)
+    # split_datasets moves every file to train and test directories
+    split_datasets(files=total_files,
+                   output_path=PREPROCESSED_DATA_PATH)
