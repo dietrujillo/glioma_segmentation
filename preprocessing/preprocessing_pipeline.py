@@ -247,4 +247,5 @@ if __name__ == '__main__':
 
     # split_datasets moves every file to train and test directories
     split_datasets(files=total_files,
+                   test_ratio=0.2,
                    output_path=PREPROCESSED_DATA_PATH)

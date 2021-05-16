@@ -110,7 +110,7 @@ def train(training_id: AnyStr,
 
     print(f"Start training of model {training_id}.")
 
-    history = model.fit(BraTSDataLoader(data_path, augment=False, batch_size=batch_size), epochs=epochs,
+    history = model.fit(BraTSDataLoader(data_path, augment=True, batch_size=batch_size), epochs=epochs,
                         validation_data=BraTSDataLoader(val_data_path, augment=False, batch_size=batch_size),
                         callbacks=callbacks)
 
@@ -134,6 +134,6 @@ if __name__ == '__main__':
         u_net = build_model(UNet, optimizer="nadam", loss=dice_loss)
 
         train("11_merge_patience_5", u_net,
-              data_path="preprocessed/MICCAI_BraTS_2019_Data_Training/HGG", 
-              val_data_path="preprocessed/MICCAI_BraTS_2018_Data_Training/HGG", 
+              data_path="preprocessed/train",
+              val_data_path="preprocessed/test",
               batch_size=8)

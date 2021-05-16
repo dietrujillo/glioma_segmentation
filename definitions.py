@@ -19,7 +19,7 @@ CROP_SHAPE = (200, 200, 144)
 RESIZE_SHAPE = (128, 128, 96)
 SEGMENTATION_CATEGORIES = [0., 1., 2., 4.]
 NO_AUGMENTATION_PROBABILITY = 0.5
-ROTATION_MAX_DEGREES = (-2, 2)
+ROTATION_MAX_DEGREES = (-4, 4)
 SEGMENTATION_MERGE_DICT = {
     0: tuple(),  # Enhancing tumor core does not merge
     1: (0, 2),  # All of the tumor regions form the whole tumor
@@ -30,12 +30,12 @@ SEGMENTATION_MERGE_DICT = {
 COMPUTE_DEVICES = ["/device:GPU:0", "/device:GPU:1"]
 DEFAULT_OPTIMIZER = "nadam"
 DEFAULT_LOSS = "categorical_crossentropy"
-DEFAULT_EPOCHS = 100
+DEFAULT_EPOCHS = 200
 BATCH_SIZE = 8
 EARLY_STOPPING_PARAMS = {
     "monitor": "val_weighted_dice_score",
     "min_delta": 0,
-    "patience": 10,
+    "patience": 20,
     "mode": "max",
     "baseline": None,
     "restore_best_weights": True
