@@ -33,9 +33,6 @@ class ConvBlock(tf.keras.layers.Layer):
             activation_outputs = self.activation(conv_output)
         return activation_outputs
 
-    def build(self, input_shape):
-        self.compute_output_shape(input_shape=input_shape)
-
 
 def _calculate_concat_input(concat_1_shape, concat_2_shape):
     if len(concat_1_shape) != len(concat_2_shape) or concat_1_shape[1:-1] != concat_2_shape[1:-1]:

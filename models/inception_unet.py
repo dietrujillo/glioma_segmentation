@@ -31,7 +31,7 @@ class InceptionBlock(tf.keras.layers.Layer):
         self.conv5x5_2 = ConvBlock(filters=filters_5x5, kernel_size=(5, 5, 5),
                                    use_batch_norm=True, activation=activation, name=f"{name}_conv5x5_2")
 
-        self.pooling_1 = MaxPool3D(pool_size=(3, 3, 3), padding="same", name=f"{name}_pooling_1")
+        self.pooling_1 = MaxPool3D(pool_size=(3, 3, 3), padding="same", strides=(1, 1, 1), name=f"{name}_pooling_1")
         self.pooling_2 = ConvBlock(filters=filters_1x1, kernel_size=(1, 1, 1),
                                    use_batch_norm=True, activation=activation, name=f"{name}_pooling_2")
 
@@ -61,23 +61,23 @@ class InceptionUNet(UNet):
     def __init__(self, **kwargs):
         super(InceptionUNet, self).__init__(**kwargs)
 
-        self.e1_l1 = InceptionBlock(16, 16, 16, name="e1_l1")
-        self.e1_l2 = InceptionBlock(32, 32, 32, name="e1_l2")
+        self.e1_l1 = InceptionBlock(8, 8, 8, name="e1_l1")
+        self.e1_l2 = InceptionBlock(16, 16, 16, name="e1_l2")
 
-        self.e2_l1 = InceptionBlock(32, 32, 32, name="e2_l1")
-        self.e2_l2 = InceptionBlock(64, 64, 64, name="e2_l2")
+        self.e2_l1 = InceptionBlock(16, 16, 16, name="e2_l1")
+        self.e2_l2 = InceptionBlock(32, 32, 32, name="e2_l2")
 
-        self.e3_l1 = InceptionBlock(64, 64, 64, name="e3_l1")
-        self.e3_l2 = InceptionBlock(128, 128, 128, name="e3_l2")
+        self.e3_l1 = InceptionBlock(32, 32, 32, name="e3_l1")
+        self.e3_l2 = InceptionBlock(64, 64, 64, name="e3_l2")
 
-        self.bottom_l1 = InceptionBlock(128, 128, 128, name="bottom_l1")
-        self.bottom_l2 = InceptionBlock(256, 256, 256, name="bottom_l2")
+        self.bottom_l1 = InceptionBlock(64, 64, 64, name="bottom_l1")
+        self.bottom_l2 = InceptionBlock(128, 128, 128, name="bottom_l2")
 
-        self.d3_l1 = InceptionBlock(128, 128, 128, name="d3_l1")
-        self.d3_l2 = InceptionBlock(64, 64, 64, name="d3_l2")
+        self.d3_l1 = InceptionBlock(64, 64, 64, name="d3_l1")
+        self.d3_l2 = InceptionBlock(32, 32, 32, name="d3_l2")
 
-        self.d2_l1 = InceptionBlock(64, 64, 64, name="d2_l1")
-        self.d2_l2 = InceptionBlock(32, 32, 32, name="d2_l2")
+        self.d2_l1 = InceptionBlock(32, 32, 32, name="d2_l1")
+        self.d2_l2 = InceptionBlock(16, 16, 16, name="d2_l2")
 
-        self.d1_l1 = InceptionBlock(32, 32, 32, name="d3_l1")
-        self.d1_l2 = InceptionBlock(16, 16, 16, name="d3_l2")
+        self.d1_l1 = InceptionBlock(16, 16, 16, name="d3_l1")
+        self.d1_l2 = InceptionBlock(8, 8, 8, name="d3_l2")

@@ -15,7 +15,7 @@ from definitions import (
     EARLY_STOPPING_PARAMS, BATCH_SIZE,
     COMPUTE_DEVICES, RANDOM_SEED
 )
-from models.unet import UNet
+from models.inception_unet import InceptionUNet
 from training.dataloader import BraTSDataLoader
 from training.loss import dice_loss
 from training.metrics import METRICS
@@ -110,7 +110,7 @@ def train(training_id: AnyStr,
 
     print(f"Start training of model {training_id}.")
 
-    history = model.fit(BraTSDataLoader(data_path, augment=True, batch_size=batch_size, subdivide_sectors=True),
+    history = model.fit(BraTSDataLoader(data_path, augment=True, batch_size=batch_size, subdivide_sectors=False),
                         validation_data=BraTSDataLoader(val_data_path, augment=False, batch_size=batch_size),
                         epochs=epochs,
                         callbacks=callbacks)
@@ -132,9 +132,9 @@ if __name__ == '__main__':
 
     with distribution.scope():
 
-        u_net = build_model(UNet, optimizer="nadam", loss=dice_loss)
+        u_net = build_model(InceptionUNet, optimizer="nadam", loss=dice_loss)
 
-        train("11_merge_patience_5", u_net,
+        train("16_inception", u_net,
               data_path="preprocessed/train",
               val_data_path="preprocessed/test",
-              batch_size=8)
+              batch_size=4)
