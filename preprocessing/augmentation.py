@@ -83,8 +83,8 @@ def gaussian_noise(tensor: tf.Tensor, random_state: int) -> tf.Tensor:
     nominal_range = q1 + (0.1 * iqr), q3 - (0.1 * iqr)
 
     sigma = 0.1
-    noise = tf.where(tensor == 0, tf.zeros_like(tensor, dtype=tf.float32),
-                     tf.random.normal(shape=tensor.shape, mean=0, stddev=sigma, seed=random_state, dtype=tf.float32))
+    noise = tf.where(tensor == 0, tf.zeros_like(tensor, dtype=tensor.dtype),
+                     tf.random.normal(shape=tensor.shape, mean=0, stddev=sigma, seed=random_state, dtype=tensor.dtype))
 
     noised_tensor = tensor + noise
     ret = tf.where((nominal_range[0] <= noised_tensor) & (noised_tensor <= nominal_range[1]), noised_tensor, tensor)
@@ -103,25 +103,51 @@ def rotation(tensor: tf.Tensor, random_state: int) -> tf.Tensor:
 
     degree = random_state.uniform(*ROTATION_MAX_DEGREES)
     rotation_plane = tuple(random_state.choice(3, replace=False, size=2))
-    rotation = remove_background_fuzz(rotate)(arr, angle=degree, axes=rotation_plane, reshape=False)
-    return np.clip(rotation, 0, 1)
+    rotated_tensor = remove_background_fuzz(rotate)(tensor.numpy(), angle=degree, axes=rotation_plane, reshape=False)
+    return tf.cast(np.clip(rotated_tensor, 0, 1), dtype=tensor.dtype)
 
 
+def compose(*ops: Callable) -> Callable:
+    def composed_transform(*inputs: np.ndarray) -> tf.Tensor:
+        outputs = inputs
+        for op in ops:
+            outputs = op(*outputs)
+        return outputs
 
-_AUGMENTATIONS = (_sagittal_flip, _gaussian_noise, _rotation)
+    return composed_transform
+
+
+def one_of(*ops: Callable, prob: np.ndarray = None) -> Callable:
+    def transform(*inputs: np.ndarray) -> tf.Tensor:
+        op = np.random.choice(ops, p=prob)
+        return op(*inputs)
+    return transform
+
+
+def optional(op: Callable, prob: float = 0.5) -> Callable:
+    if np.random.rand() < prob:
+        return op
+    return lambda *args: args
+
+
+AUGMENTATION_PIPELINE = compose(
+    optional(sagittal_flip, prob=0.5),
+    optional(
+        one_of(
+            rotation,
+            gaussian_noise
+        ),
+        prob=0.5
+    )
+)
 
 
 def apply_augmentation(data: np.ndarray, seg: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Randomly apply an augmentation to the data, or no augmentation at all.
-    The probability distribution is NO_AUGMENTATION_PROBABILITY for no transformation,
-    then uniformly distributed across the possible transformations.
+    Apply the augmentation pipeline to some data.
 
     :param data: list of the different MRI scans.
     :param seg: ground truth segmentation.
-    :return: tuple with data and seg, transformed or otherwise.
+    :return: tuple with data and seg, after being randomly modified.
     """
-    if np.random.rand() <= NO_AUGMENTATION_PROBABILITY:
-        return data, seg
-    else:
-        return np.random.choice(_AUGMENTATIONS)(data, seg)
+    return AUGMENTATION_PIPELINE(data, seg)
