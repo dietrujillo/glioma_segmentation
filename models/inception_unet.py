@@ -1,9 +1,11 @@
-from models.unet import UNet, ConvBlock
-import tensorflow as tf
 from typing import AnyStr, Union
+
+import tensorflow as tf
 from tensorflow.keras.layers import (
     Activation, MaxPool3D, ReLU, Concatenate
 )
+
+from models.unet import UNet, ConvBlock
 
 
 class InceptionBlock(tf.keras.layers.Layer):
