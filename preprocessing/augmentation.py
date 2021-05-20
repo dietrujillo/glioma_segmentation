@@ -5,11 +5,11 @@ import tensorflow as tf
 from tensorflow_probability.python.stats import percentile
 from scipy.ndimage import rotate
 
-from definitions import SCAN_TYPES, NO_AUGMENTATION_PROBABILITY, ROTATION_MAX_DEGREES
+from definitions import SCAN_TYPES, ROTATION_MAX_DEGREES
 from preprocessing.preprocessing_pipeline import remove_background_fuzz
 
 
-def _augmentation(apply_to_label: bool = False) \
+def augmentation(apply_to_label: bool = False) \
         -> Callable[[Callable[[tf.Tensor, np.random.RandomState], tf.Tensor]],
                     Callable[[tf.Tensor, tf.Tensor], Tuple[tf.Tensor, tf.Tensor]]]:
     """
@@ -46,7 +46,7 @@ def _augmentation(apply_to_label: bool = False) \
     return augmentation_inner
 
 
-@_augmentation(apply_to_label=True)
+@augmentation(apply_to_label=True)
 @tf.function
 def sagittal_flip(tensor: tf.Tensor, random_state: int = None) -> tf.Tensor:
     """
@@ -58,7 +58,7 @@ def sagittal_flip(tensor: tf.Tensor, random_state: int = None) -> tf.Tensor:
     return tf.reverse(tensor, axis=tf.constant([0]))
 
 
-@_augmentation(apply_to_label=False)
+@augmentation(apply_to_label=False)
 @tf.function
 def gaussian_noise(tensor: tf.Tensor, random_state: int) -> tf.Tensor:
     """
@@ -91,7 +91,7 @@ def gaussian_noise(tensor: tf.Tensor, random_state: int) -> tf.Tensor:
     return ret
 
 
-@_augmentation(apply_to_label=True)
+@augmentation(apply_to_label=True)
 def rotation(tensor: tf.Tensor, random_state: int) -> tf.Tensor:
     """
     Rotate the tensor along all axes in a range of (min_degree, max_degree)
@@ -108,7 +108,12 @@ def rotation(tensor: tf.Tensor, random_state: int) -> tf.Tensor:
 
 
 def compose(*ops: Callable) -> Callable:
-    def composed_transform(*inputs: np.ndarray) -> tf.Tensor:
+    """
+    Apply a number of operations sequentially.
+    :param ops: operations to apply
+    :return: callable with composition of the operations.
+    """
+    def composed_transform(*inputs: tf.Tensor) -> Tuple[tf.Tensor]:
         outputs = inputs
         for op in ops:
             outputs = op(*outputs)
@@ -118,16 +123,31 @@ def compose(*ops: Callable) -> Callable:
 
 
 def one_of(*ops: Callable, prob: np.ndarray = None) -> Callable:
-    def transform(*inputs: np.ndarray) -> tf.Tensor:
+    """
+    Randomly apply one of a number of operations.
+    :param ops: possible operations to apply.
+    :param prob: probability weights for each operation.
+    :return: callable with one of the operations chosen randomly.
+    """
+    def transform(*inputs: tf.Tensor) -> Tuple[tf.Tensor]:
         op = np.random.choice(ops, p=prob)
         return op(*inputs)
     return transform
 
 
 def optional(op: Callable, prob: float = 0.5) -> Callable:
-    if np.random.rand() < prob:
-        return op
-    return lambda *args: args
+    """
+    Apply an operation with probability prob.
+    :param op: operation to apply.
+    :param prob: probability of applying the operation.
+    :return: callable that randomly applies op or does nothing.
+    """
+    def optional_transform(*inputs: tf.Tensor) -> Tuple[tf.Tensor]:
+        if np.random.rand() < prob:
+            return op(*inputs)
+        return inputs
+
+    return optional_transform
 
 
 AUGMENTATION_PIPELINE = compose(
