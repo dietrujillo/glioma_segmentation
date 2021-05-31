@@ -37,7 +37,7 @@ class ModelAggregator(tf.keras.models.Model):
         if self.use_inputs:
             self.input_conv = ConvBlock(filters=output_channels, kernel_size=(1, 1, 1), name="input_conv")
 
-        self.channel_conv = [ConvBlock(filters=1, kernel_size=(1, 1, 1)) for _ in range(output_channels)]
+        self.channel_conv = [ConvBlock(filters=1, kernel_size=(1, 1, 1), activation="sigmoid") for _ in range(output_channels)]
 
         for i, model in enumerate(models):
             if pretrained:
@@ -50,7 +50,7 @@ class ModelAggregator(tf.keras.models.Model):
     def call(self, inputs, training=None, mask=None):
         model_predictions = []
         if self.use_inputs:
-            model_predictions.append(self.conv(inputs))
+            model_predictions.append(self.input_conv(inputs))
 
         for model in self.models:
             model_predictions.append(model(inputs, training=(training and not self.pretrained), mask=mask))
@@ -61,7 +61,7 @@ class ModelAggregator(tf.keras.models.Model):
         ret = []
         for channel in range(self.output_channels):
             channel_prediction = self.channel_conv[channel](model_predictions[..., channel])
-            ret.append(tf.squeeze(channel_prediction, axis=range(1, len(channel_prediction.shape))))
+            ret.append(channel_prediction)
 
         return tf.stack(ret, axis=-1)
 

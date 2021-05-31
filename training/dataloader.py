@@ -87,7 +87,6 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
                     scan = nib.load(os.path.join(patient_dir,
                                                  f"{patient}_{scan_type}.nii{'.gz' if self.compressed_files else ''}")
                                     ).get_fdata()
-                    scan = tf.cast(scan, dtype=tf.float32)
                     data.append(scan)
 
                 data = np.stack(data, axis=-1)
@@ -95,7 +94,6 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
                     seg = nib.load(os.path.join(patient_dir,
                                                 f"{patient}_seg.nii{'.gz' if self.compressed_files else ''}")
                                    ).get_fdata()
-                    seg = tf.cast(seg, dtype=tf.int32)
 
                 if self.augment and self.retrieve_seg:
                     data, seg = apply_augmentation(data, seg)
@@ -114,11 +112,11 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
             except FileNotFoundError as e:
                 if self.verbose:
                     print(f"Missing file for patient {patient}: {e.filename}")
-
-        data_batch = tf.stack(data_batch)
+                    
+        data_batch = np.stack(data_batch)
 
         if self.retrieve_seg:
-            seg_batch = tf.stack(seg_batch)
+            seg_batch = np.stack(seg_batch)
             return data_batch, seg_batch
         return data_batch
 

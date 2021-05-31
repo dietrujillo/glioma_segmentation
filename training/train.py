@@ -15,10 +15,11 @@ from definitions import (
     EARLY_STOPPING_PARAMS, BATCH_SIZE,
     COMPUTE_DEVICES, RANDOM_SEED
 )
-from models.inception_unet import InceptionUNet
+from models.unet import UNet
+from models.model_aggregator import ModelAggregator
 from training.dataloader import BraTSDataLoader
 from training.loss import dice_loss
-from training.metrics import METRICS
+from training.metrics import METRICS, dice_wt, dice_tc, dice_etc, weighted_dice_score
 
 
 def init_random_seed(random_state: int = RANDOM_SEED) -> None:
@@ -110,7 +111,7 @@ def train(training_id: AnyStr,
 
     print(f"Start training of model {training_id}.")
 
-    history = model.fit(BraTSDataLoader(data_path, augment=True, batch_size=batch_size, subdivide_sectors=False),
+    history = model.fit(BraTSDataLoader(data_path, augment=True, batch_size=batch_size, subdivide_sectors=True, verbose=True),
                         validation_data=BraTSDataLoader(val_data_path, augment=False, batch_size=batch_size),
                         epochs=epochs,
                         callbacks=callbacks)
@@ -132,9 +133,36 @@ if __name__ == '__main__':
 
     with distribution.scope():
 
-        u_net = build_model(InceptionUNet, optimizer="nadam", loss=dice_loss)
+        """u_net = build_model(
+            ModelAggregator,
+            model_params={
+                "models": [
+                    os.path.join(RESULTS_PATH, "14_split_augment_patience_20/model.tf"),
+                    os.path.join(RESULTS_PATH, "16_inception/model.tf")
+                ],
+                "pretrained": True,
+                "custom_layers": [
+                    {
+                        "dice_loss": dice_loss,
+                        "dice_wt": dice_wt,
+                        "dice_tc": dice_tc,
+                        "dice_etc": dice_etc,
+                        "weighted_dice_score": weighted_dice_score
+                    },
+                    {
+                        "dice_loss": dice_loss,
+                        "dice_wt": dice_wt,
+                        "dice_tc": dice_tc,
+                        "dice_etc": dice_etc,
+                        "weighted_dice_score": weighted_dice_score
+                    }
+                ]
+            },
+            optimizer="nadam", loss=dice_loss)"""
 
-        train("16_inception", u_net,
+        u_net = build_model(UNet, optimizer="nadam", loss=dice_loss)
+
+        train("18_unet_no_resize_patches", u_net,
               data_path="preprocessed/train",
               val_data_path="preprocessed/test",
-              batch_size=4)
+              batch_size=2)

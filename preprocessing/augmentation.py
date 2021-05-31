@@ -2,7 +2,6 @@ from typing import Callable, Tuple
 
 import numpy as np
 import tensorflow as tf
-from tensorflow_probability.python.stats import percentile
 from scipy.ndimage import rotate
 
 from definitions import SCAN_TYPES, ROTATION_MAX_DEGREES
@@ -10,36 +9,30 @@ from preprocessing.preprocessing_pipeline import remove_background_fuzz
 
 
 def augmentation(apply_to_label: bool = False) \
-        -> Callable[[Callable[[tf.Tensor, np.random.RandomState], tf.Tensor]],
-                    Callable[[tf.Tensor, tf.Tensor], Tuple[tf.Tensor, tf.Tensor]]]:
+        -> Callable[[Callable[[np.ndarray, np.random.RandomState], np.ndarray]],
+                    Callable[[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]]:
     """
     Decorator used to apply an augmentation to many elements at once.
-
     Functions using this decorator should have one array as input. However, once the decorator has been
     applied, the inputs should be a list of arrays for every resonance type, and an array containing
     the ground truth segmentation.
-
     A random integer will be provided as a RandomState initializer for the augmentations,
     so that every image from the same patient uses the same random numbers.
-
     :param apply_to_label: whether to apply the augmentation to the ground truth segmentation.
     :return: a decorated function with the characteristics described above.
     """
 
-    def augmentation_inner(augment_function: Callable[..., tf.Tensor]) \
-            -> Callable[[tf.Tensor, tf.Tensor], Tuple[tf.Tensor, tf.Tensor]]:
+    def augmentation_inner(augment_function: Callable[..., np.ndarray]) \
+            -> Callable[[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]]:
 
-        def augment_many(data: tf.Tensor, seg: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
-            data = tf.identity(data)
-            random_state = np.random.randint(65535)
-
-            augmented_data = []
+        def augment_many(data: np.ndarray, seg: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+            data = np.copy(data)
+            random_state = np.random.randint(2 ** 16 - 1)
             for index in range(len(SCAN_TYPES)):
-                augmented_data.append(augment_function(data[..., index], random_state=random_state))
-            data = tf.stack(augmented_data, axis=-1)
+                data[..., index] = augment_function(data[..., index], random_state=random_state)
             if apply_to_label:
                 seg = augment_function(seg, random_state=random_state)
-                seg = tf.clip_by_value(tf.round(seg), 0, 1)
+                seg = np.clip(np.around(seg), 0, 1)
             return data, seg
         return augment_many
 
@@ -47,52 +40,46 @@ def augmentation(apply_to_label: bool = False) \
 
 
 @augmentation(apply_to_label=True)
-@tf.function
-def sagittal_flip(tensor: tf.Tensor, random_state: int = None) -> tf.Tensor:
+def sagittal_flip(arr: np.ndarray, random_state: int = None) -> np.ndarray:
     """
     Flip along the first axis. For 3D brain MRI data, this means the sagittal plane.
-    :param tensor: tensor to be flipped.
+    :param arr: array to be flipped.
     :param random_state: random number generator. Unused, kept for compatibility.
-    :return: tensor flipped on the sagittal plane.
+    :return: array flipped on the sagittal plane.
     """
-    return tf.reverse(tensor, axis=tf.constant([0]))
+    return arr[::-1]
 
 
 @augmentation(apply_to_label=False)
-@tf.function
-def gaussian_noise(tensor: tf.Tensor, random_state: int) -> tf.Tensor:
+def gaussian_noise(arr: np.ndarray, random_state: int = None) -> np.ndarray:
     """
     Apply gaussian noise to an array.
-
     All calculations are done excluding zero values,
     as to avoid taking the background of the image into account.
-
     Values of noise resulting in array values outside of the nominal range
     (defined as [Q1 + 0.1 * IQR, Q3 - 0.1 * IQR] for this problem,
     where Q1 and Q3 are the first and third quartiles respectively and IQR is the interquartile range)
     are excluded and not applied.
-
-    :param tensor: tensor to be noised.
-    :param random_state: random seed.
-    :return: copy of the tensor, modified with gaussian noise.
+    :param arr: array to be noised.
+    :param random_state: random number generator. Unused, kept for compatibility.
+    :return: copy of the array, modified with gaussian noise.
     """
+    random_state = np.random.RandomState(random_state)
 
-    q1 = percentile(tensor[tensor != 0], 25)
-    q3 = percentile(tensor[tensor != 0], 75)
+    q1 = np.percentile(arr[arr != 0], 25)
+    q3 = np.percentile(arr[arr != 0], 75)
     iqr = q3 - q1
     nominal_range = q1 + (0.1 * iqr), q3 - (0.1 * iqr)
 
     sigma = 0.1
-    noise = tf.where(tensor == 0, tf.zeros_like(tensor, dtype=tensor.dtype),
-                     tf.random.normal(shape=tensor.shape, mean=0, stddev=sigma, seed=random_state, dtype=tensor.dtype))
+    noise = np.where(arr == 0, np.zeros_like(arr), random_state.normal(0, sigma, size=arr.shape))
 
-    noised_tensor = tensor + noise
-    ret = tf.where((nominal_range[0] <= noised_tensor) & (noised_tensor <= nominal_range[1]), noised_tensor, tensor)
+    ret = np.where((nominal_range[0] <= arr + noise) & (arr + noise <= nominal_range[1]), arr + noise, arr)
     return ret
 
 
 @augmentation(apply_to_label=True)
-def rotation(tensor: tf.Tensor, random_state: int) -> tf.Tensor:
+def rotation(arr: np.ndarray, random_state: int) -> np.ndarray:
     """
     Rotate the tensor along all axes in a range of (min_degree, max_degree)
     :param tensor: tensor to be modified.
@@ -103,8 +90,8 @@ def rotation(tensor: tf.Tensor, random_state: int) -> tf.Tensor:
 
     degree = random_state.uniform(*ROTATION_MAX_DEGREES)
     rotation_plane = tuple(random_state.choice(3, replace=False, size=2))
-    rotated_tensor = remove_background_fuzz(rotate)(tensor.numpy(), angle=degree, axes=rotation_plane, reshape=False)
-    return tf.cast(np.clip(rotated_tensor, 0, 1), dtype=tensor.dtype)
+    rotated_tensor = remove_background_fuzz(rotate)(arr, angle=degree, axes=rotation_plane, reshape=False)
+    return np.clip(rotated_tensor, 0, 1)
 
 
 def compose(*ops: Callable) -> Callable:
