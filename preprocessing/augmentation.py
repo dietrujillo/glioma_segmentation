@@ -100,7 +100,7 @@ def compose(*ops: Callable) -> Callable:
     :param ops: operations to apply
     :return: callable with composition of the operations.
     """
-    def composed_transform(*inputs: tf.Tensor) -> Tuple[tf.Tensor]:
+    def composed_transform(*inputs: np.ndarray) -> Tuple[np.ndarray]:
         outputs = inputs
         for op in ops:
             outputs = op(*outputs)
@@ -116,7 +116,7 @@ def one_of(*ops: Callable, prob: np.ndarray = None) -> Callable:
     :param prob: probability weights for each operation.
     :return: callable with one of the operations chosen randomly.
     """
-    def transform(*inputs: tf.Tensor) -> Tuple[tf.Tensor]:
+    def transform(*inputs: np.ndarray) -> Tuple[np.ndarray]:
         op = np.random.choice(ops, p=prob)
         return op(*inputs)
     return transform
@@ -129,7 +129,7 @@ def optional(op: Callable, prob: float = 0.5) -> Callable:
     :param prob: probability of applying the operation.
     :return: callable that randomly applies op or does nothing.
     """
-    def optional_transform(*inputs: tf.Tensor) -> Tuple[tf.Tensor]:
+    def optional_transform(*inputs: np.ndarray) -> Tuple[np.ndarray]:
         if np.random.rand() < prob:
             return op(*inputs)
         return inputs

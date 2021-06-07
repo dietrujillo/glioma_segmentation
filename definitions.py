@@ -4,7 +4,7 @@ import os
 RANDOM_SEED = 42
 SCAN_TYPES = ("t1", "t2", "flair", "t1ce")
 INPUT_DATA_SHAPE = (240, 240, 155)
-PREPROCESSED_DATA_SHAPE = (200, 200, 144)
+PREPROCESSED_DATA_SHAPE = (128, 128, 96)
 
 # FILE PATHS
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -14,9 +14,9 @@ RESULTS_PATH = os.path.join(PROJECT_ROOT, "results")
 
 # PREPROCESSING & AUGMENTATION
 MAX_CROP_LIMIT = [(40, 196), (29, 222), (0, 148)]
-CROP_LIMIT = [(20, 220), (20, 220), (6, 150)]
-CROP_SHAPE = (200, 200, 144)
-RESIZE_SHAPE = (200, 200, 144)
+CROP_LIMIT = [(16, 224), (16, 224), (6, 150)]
+CROP_SHAPE = (208, 208, 144)
+RESIZE_SHAPE = (128, 128, 96)  # (208, 208, 144)
 SEGMENTATION_CATEGORIES = [0., 1., 2., 4.]
 NO_AUGMENTATION_PROBABILITY = 0.5
 ROTATION_MAX_DEGREES = (-4, 4)
@@ -27,11 +27,11 @@ SEGMENTATION_MERGE_DICT = {
 }
 
 # TRAINING
-COMPUTE_DEVICES = ["/device:GPU:0", "/device:GPU:1"]
+COMPUTE_DEVICES = ["/device:GPU:1"]
 DEFAULT_OPTIMIZER = "nadam"
 DEFAULT_LOSS = "categorical_crossentropy"
 DEFAULT_EPOCHS = 200
-BATCH_SIZE = 8
+BATCH_SIZE = 4
 EARLY_STOPPING_PARAMS = {
     "monitor": "val_weighted_dice_score",
     "min_delta": 0,

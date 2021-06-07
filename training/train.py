@@ -111,7 +111,7 @@ def train(training_id: AnyStr,
 
     print(f"Start training of model {training_id}.")
 
-    history = model.fit(BraTSDataLoader(data_path, augment=True, batch_size=batch_size, subdivide_sectors=True, verbose=True),
+    history = model.fit(BraTSDataLoader(data_path, augment=True, batch_size=batch_size, subdivide_sectors=False, verbose=False),
                         validation_data=BraTSDataLoader(val_data_path, augment=False, batch_size=batch_size),
                         epochs=epochs,
                         callbacks=callbacks)
@@ -124,23 +124,15 @@ def train(training_id: AnyStr,
         json.dump(history.history, file, indent=4)
 
 
-if __name__ == '__main__':
 
-    init_random_seed(RANDOM_SEED)
-    setup_gpu()
-
-    distribution = tf.distribute.MirroredStrategy(COMPUTE_DEVICES)
-
-    with distribution.scope():
-
-        """u_net = build_model(
+def main():
+    u_net = build_model(
             ModelAggregator,
             model_params={
                 "models": [
                     os.path.join(RESULTS_PATH, "14_split_augment_patience_20/model.tf"),
                     os.path.join(RESULTS_PATH, "16_inception/model.tf")
                 ],
-                "pretrained": True,
                 "custom_layers": [
                     {
                         "dice_loss": dice_loss,
@@ -158,11 +150,26 @@ if __name__ == '__main__':
                     }
                 ]
             },
-            optimizer="nadam", loss=dice_loss)"""
+            optimizer="nadam", loss=dice_loss)
+            
+    train("20_small_aggregator", u_net, 
+          data_path="preprocessed/train",
+          val_data_path="preprocessed/test",
+          batch_size=BATCH_SIZE)
 
-        u_net = build_model(UNet, optimizer="nadam", loss=dice_loss)
+if __name__ == '__main__':
 
-        train("18_unet_no_resize_patches", u_net,
-              data_path="preprocessed/train",
-              val_data_path="preprocessed/test",
-              batch_size=2)
+    init_random_seed(RANDOM_SEED)
+    setup_gpu()
+
+    if len(COMPUTE_DEVICES) > 1:
+        distribution = tf.distribute.MirroredStrategy(COMPUTE_DEVICES)
+        with distribution.scope():
+            main()
+    elif len(COMPUTE_DEVICES) == 1:
+        with tf.device(COMPUTE_DEVICES[0]):
+            main()
+    else:
+        raise ValueError("No compute device specified.")
+
+        

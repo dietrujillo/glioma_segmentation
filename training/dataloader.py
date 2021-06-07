@@ -113,10 +113,10 @@ class BraTSDataLoader(tf.keras.utils.Sequence):
                 if self.verbose:
                     print(f"Missing file for patient {patient}: {e.filename}")
                     
-        data_batch = np.stack(data_batch)
+        data_batch = tf.cast(np.stack(data_batch), dtype=tf.float32)
 
         if self.retrieve_seg:
-            seg_batch = np.stack(seg_batch)
+            seg_batch = tf.cast(np.stack(seg_batch), dtype=tf.float32)
             return data_batch, seg_batch
         return data_batch
 
