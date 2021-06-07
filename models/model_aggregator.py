@@ -31,7 +31,7 @@ class ModelAggregator(tf.keras.models.Model):
         if self.use_inputs:
             self.input_conv = ConvBlock(filters=output_channels, kernel_size=(1, 1, 1), name="input_conv")
 
-        self.channel_conv = [ConvBlock(filters=1, kernel_size=(1, 1, 1), activation="sigmoid") for _ in range(output_channels)]
+        self.channel_conv = [ConvBlock(filters=1, kernel_size=(1, 1, 1), activation="sigmoid", name=f"channel_conv_{i}") for i in range(output_channels)]
 
         for i, model in enumerate(models):
             sub_model = tf.keras.models.load_model(model, custom_objects=custom_layers[i])
