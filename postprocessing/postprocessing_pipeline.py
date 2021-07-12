@@ -44,26 +44,22 @@ def undo_crop(arr: np.array,
                   constant_values=0)
 
 
-@dask.delayed
 def postprocess_segmentation(seg: np.ndarray) -> np.ndarray:
     """
     Apply postprocessing pipeline to the segmentation predictions.
     :param seg: predicted labels.
     :return: postprocessed labels.
     """
-
+    
+    seg = np.clip(np.around(seg), 0, 1)
     out = np.zeros(INPUT_DATA_SHAPE)
 
-    for segmentation_class in range(seg.shape[-1]):
+    for segmentation_class in [1, 2, 0]:
         before_resize = undo_resize(seg[..., segmentation_class])
         before_resize = np.clip(np.around(before_resize), 0, 1)
         before_crop = undo_crop(before_resize)
         out[before_crop == 1] = SEGMENTATION_CATEGORIES[segmentation_class + 1]
 
+    out = np.around(out).astype(np.int32)
+
     return out
-
-
-def postprocessing_pipeline(predictions: np.ndarray) -> np.ndarray:
-    with ProgressBar():
-        results = dask.compute([postprocess_segmentation(x) for x in predictions])
-    return np.stack(results)

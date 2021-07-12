@@ -1,7 +1,10 @@
 import os
 
+import numpy as np
 import nibabel as nib
 import tensorflow as tf
+import dask
+from dask.diagnostics import ProgressBar
 
 from definitions import RESULTS_PATH, DATA_PATH, PREPROCESSED_DATA_PATH
 from postprocessing.postprocessing_pipeline import postprocess_segmentation
@@ -10,9 +13,10 @@ from training.dataloader import BraTSDataLoader
 from training.loss import dice_loss
 from training.metrics import dice_etc, dice_wt, dice_tc, weighted_dice_score
 
+
 if __name__ == '__main__':
 
-    model_path = os.path.join(RESULTS_PATH, "12_two_datasets_patience_10/model.tf")
+    model_path = os.path.join(RESULTS_PATH, "28_aggregator_no_bn_relu/model.tf")
     test_data_path = os.path.join(DATA_PATH, "MICCAI_BraTS2020_ValidationData")
     preprocessed_test_data_path = os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS2020_ValidationData")
     predictions_path = os.path.join(PREPROCESSED_DATA_PATH, "MICCAI_BraTS2020_ValidationPredictions")
@@ -44,6 +48,17 @@ if __name__ == '__main__':
 
     print("Post-processing predictions...")
 
-    for patient, prediction in zip(patients, predictions):
+    header = nib.load(os.path.join(DATA_PATH, "MICCAI_BraTS2020_TrainingData/HGG/BraTS20_Training_001/BraTS20_Training_001_seg.nii.gz")).header
+
+    @dask.delayed
+    def distributed_postprocessing(patient, prediction):
         seg = postprocess_segmentation(prediction)
-        nib.save(nib.Nifti1Image(seg, None), os.path.join(predictions_path, f"{patient}.nii.gz"))
+        image = nib.Nifti1Image(seg, None, header=header)
+        nib.save(image, os.path.join(predictions_path, f"{patient}.nii.gz"))
+
+    delayed_ops = []
+    for patient, prediction in zip(patients, predictions):
+        delayed_ops.append(distributed_postprocessing(patient, prediction))
+
+    with ProgressBar():
+        dask.compute(delayed_ops)

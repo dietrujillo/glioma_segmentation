@@ -27,15 +27,15 @@ SEGMENTATION_MERGE_DICT = {
 }
 
 # TRAINING
-COMPUTE_DEVICES = ["/device:GPU:1"]
+COMPUTE_DEVICES = ["/device:GPU:0", "/device:GPU:1"]
 DEFAULT_OPTIMIZER = "nadam"
 DEFAULT_LOSS = "categorical_crossentropy"
-DEFAULT_EPOCHS = 200
-BATCH_SIZE = 4
+DEFAULT_EPOCHS = 39
+BATCH_SIZE = 8
 EARLY_STOPPING_PARAMS = {
     "monitor": "val_weighted_dice_score",
     "min_delta": 0,
-    "patience": 20,
+    "patience": 10,
     "mode": "max",
     "baseline": None,
     "restore_best_weights": True
